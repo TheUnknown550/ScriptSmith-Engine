@@ -1,0 +1,7 @@
+google-genai
+python-dotenv
+soundfile
+numpy
+faster-whisper
+ffmpeg-python
+runware
