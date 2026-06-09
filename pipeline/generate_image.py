@@ -44,41 +44,6 @@ def _timestamp_slug(seconds: float) -> str:
     return f"{minutes:02d}-{secs:02d}-{millis:03d}"
 
 
-def _scene_schema() -> dict[str, Any]:
-    item = {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "scene_number": {"type": "integer"},
-            "start": {"type": "number"},
-            "end": {"type": "number"},
-            "transcript": {"type": "string"},
-            "summary": {"type": "string"},
-            "scene_change": {"type": "string", "enum": ["hard", "soft"]},
-            "continue_from_previous": {"type": "boolean"},
-            "reference_mode": {"type": "string", "enum": ["none", "soft", "strong"]},
-            "prompt": {"type": "string"},
-        },
-        "required": [
-            "scene_number",
-            "start",
-            "end",
-            "transcript",
-            "summary",
-            "scene_change",
-            "continue_from_previous",
-            "reference_mode",
-            "prompt",
-        ],
-    }
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {"scenes": {"type": "array", "items": item}},
-        "required": ["scenes"],
-    }
-
-
 def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
     transcript_lines = []
     for row in segments:
@@ -90,23 +55,71 @@ def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
     transcript_block = "\n".join(transcript_lines)
     return "\n".join(
         [
-            "Turn this narrated transcript into an image plan for a cinematic video.",
+            "You are going to generate images for a YouTube script.",
+            "Your job is to read the script carefully and create a separate image plan for each timestamp.",
+            "Each image must visually illustrate what the narrator is saying at that exact moment.",
+            "Do not create random images. Every image should feel like a simple visual explanation of the current line.",
+            "Turn this narrated transcript into an image plan for a YouTube video.",
             "Create exactly one scene per transcript segment.",
             "Do not merge segments.",
             "Do not split segments.",
             "Return exactly the same number of scenes as the transcript segments provided.",
             "Each scene_number must match the transcript segment index.",
-            "Each scene start and end must exactly match the transcript segment timestamps.",
+            "The generated image prompts should be written for ChatGPT Image 2 style image generation.",
+            "The prompts must preserve consistency across scenes while still making each image different.",
             "Use continue_from_previous=true only when the next image should visibly preserve the same subject, location, and style continuity.",
             "Use scene_change=hard and reference_mode=none for major visual resets like new place, new time, new action, or a big reveal.",
             "Use scene_change=soft with reference_mode=soft or strong only for neighboring shots that should feel connected.",
-            "Write prompts for still-image generation, not for animation.",
-            "Every prompt must include clear subject, environment, camera framing, lighting, and mood.",
-            f"Assume this persistent global style is always added separately: {config.IMAGE_PROMPT_STYLE}",
+            "Write prompts for still-image generation, not for animation or video.",
+            "Every prompt must include a clear subject, the simple environment, the emotion, and the idea being explained.",
+            "Style requirements for every prompt:",
+            "- extremely simple beginner drawings made in MS Paint",
+            "- white background",
+            "- thick uneven black outlines",
+            "- wobbly hand-drawn lines",
+            "- stick figure humans with round heads and line bodies",
+            "- simple dot eyes or circle eyes",
+            "- very basic facial expressions",
+            "- flat colors only",
+            "- mostly empty white space",
+            "- occasional flat colors like green, brown, gray, red, yellow, orange, and blue",
+            "- red arrows or red question marks only when helpful",
+            "- handwritten text only when it helps explain the idea",
+            "- if text appears, it must be short, spelled correctly, and easy to read",
+            "- 16:9 horizontal YouTube frame",
+            "Things to avoid in every prompt:",
+            "- realistic shading",
+            "- 3D",
+            "- cinematic lighting",
+            "- polished illustration",
+            "- anime or Disney style",
+            "- realistic humans",
+            "- detailed backgrounds",
+            "- complex textures",
+            "- glossy modern design",
+            "The drawings should feel amateur, funny, simple, and intentionally bad, like a beginner drew them quickly in Paint.",
+            f"Assume this persistent global style is always added separately too: {config.IMAGE_PROMPT_STYLE}",
+            "For each scene, return a prompt that is specific enough to generate a different image for that timestamp.",
+            "Output format rules:",
+            "- Return plain text only, no markdown fences.",
+            "- Return exactly one line per segment.",
+            "- Use this exact delimiter between fields: |||",
+            "- Each line must follow this exact format (replace each field with its real value):",
+            "  1|||hard|||false|||none|||Man walks into hospital brain scanner|||MS Paint drawing of stick figure sitting in a grey oval scanner, white background, thick black lines",
+            "- scene_change: use the word hard or soft (not the label 'scene_change')",
+            "- continue_from_previous: use the word true or false (not the label 'continue_from_previous')",
+            "- reference_mode: use the word none, soft, or strong (not the label 'reference_mode')",
+            "- Do not output a header row. Do not use field names as values.",
+            "- Do not include the delimiter sequence ||| inside summary or prompt",
+            "- Do not include any extra commentary before or after the lines",
             "Transcript:",
             transcript_block,
         ]
     )
+
+
+def _chunk_segments(segments: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
+    return [segments[index : index + batch_size] for index in range(0, len(segments), batch_size)]
 
 
 def _extract_response_text(payload: dict[str, Any]) -> str:
@@ -116,6 +129,28 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
         content = message.get("content", "")
         if isinstance(content, str) and content.strip():
             return content
+        if isinstance(content, list):
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text" and item.get("text"):
+                        text_parts.append(str(item["text"]))
+                    elif item.get("text"):
+                        text_parts.append(str(item["text"]))
+                elif isinstance(item, str) and item.strip():
+                    text_parts.append(item)
+            joined = "\n".join(part for part in text_parts if part.strip()).strip()
+            if joined:
+                return joined
+        reasoning_details = message.get("reasoning_details", [])
+        if isinstance(reasoning_details, list):
+            text_parts = []
+            for item in reasoning_details:
+                if isinstance(item, dict) and item.get("text"):
+                    text_parts.append(str(item["text"]))
+            joined = "\n".join(part for part in text_parts if part.strip()).strip()
+            if joined:
+                return joined
     for item in payload.get("output", []):
         if item.get("type") != "message":
             continue
@@ -125,19 +160,84 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
     raise RuntimeError("Planner response did not contain text output.")
 
 
-def _extract_json_block(text: str) -> str:
+def _strip_model_wrappers(text: str) -> str:
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
     if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"^```(?:text|json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise RuntimeError("Planner output did not contain a JSON object.")
-    return text[start : end + 1]
+    return text.strip()
 
 
-def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _write_raw_minimax_response(text: str) -> None:
+    config.ensure_dirs()
+    with open(config.MINIMAX_RAW_RESPONSE, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+def _write_raw_minimax_payload(payload: dict[str, Any]) -> None:
+    config.ensure_dirs()
+    with open(config.MINIMAX_RAW_PAYLOAD, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
+
+
+def _append_raw_minimax_payload(payload: dict[str, Any], batch_label: str) -> None:
+    config.ensure_dirs()
+    with open(config.MINIMAX_RAW_PAYLOAD, "a", encoding="utf-8") as handle:
+        handle.write(f"\n\n=== {batch_label} ===\n")
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+
+def _parse_minimax_scene_lines(text: str, segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    cleaned = _strip_model_wrappers(text)
+    _write_raw_minimax_response(cleaned)
+    all_lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    lines = [
+        line for line in all_lines
+        if line.count("|||") == 5 and line.split("|||")[0].strip().lstrip("-").isdigit()
+    ]
+    if len(lines) != len(segments):
+        raise RuntimeError(
+            f"MiniMax returned {len(lines)} scene lines for {len(segments)} transcript segments. "
+            f"Raw response saved to {config.MINIMAX_RAW_RESPONSE}"
+        )
+
+    scenes = []
+    for row, line in zip(segments, lines):
+        parts = [part.strip() for part in line.split("|||")]
+        if len(parts) != 6:
+            raise RuntimeError(
+                f"MiniMax scene line did not have 6 fields: {line}\n"
+                f"Raw response saved to {config.MINIMAX_RAW_RESPONSE}"
+            )
+        scene_number_text, scene_change, continue_text, reference_mode, summary, prompt = parts
+        scene_number = int(scene_number_text)
+        continue_from_previous = continue_text.lower() == "true"
+        if scene_change not in {"hard", "soft"}:
+            raise RuntimeError(f"Invalid scene_change from MiniMax: {scene_change}")
+        if reference_mode not in {"none", "soft", "strong"}:
+            raise RuntimeError(f"Invalid reference_mode from MiniMax: {reference_mode}")
+        scenes.append(
+            {
+                "scene_number": scene_number,
+                "start": float(row["start"]),
+                "end": float(row["end"]),
+                "transcript": _clean_text(row.get("text", "")),
+                "summary": _clean_text(summary),
+                "scene_change": scene_change,
+                "continue_from_previous": continue_from_previous,
+                "reference_mode": reference_mode,
+                "prompt": _clean_text(prompt),
+            }
+        )
+    return scenes
+
+
+def _plan_with_minimax_batch(
+    segments: list[dict[str, Any]],
+    batch_index: int,
+    batch_total: int,
+) -> list[dict[str, Any]]:
     if not config.MINIMAX_API_KEY:
         raise RuntimeError("MINIMAX_API_KEY not configured.")
 
@@ -148,13 +248,24 @@ def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "role": "system",
                 "content": (
                     "You are a scene planner for an automated video pipeline. "
-                    "Return valid JSON only. Do not wrap it in markdown. "
-                    "Do not include explanation text before or after the JSON."
+                    "Return plain text only in the exact requested line format. "
+                    "Do not wrap it in markdown. "
+                    "Do not include explanation text before or after the output."
                 ),
             },
-            {"role": "user", "content": _build_planner_prompt(segments)},
+            {
+                "role": "user",
+                "content": "\n".join(
+                    [
+                        f"This is batch {batch_index} of {batch_total}.",
+                        "Only return lines for the segments included in this batch.",
+                        _build_planner_prompt(segments),
+                    ]
+                ),
+            },
         ],
-        "max_completion_tokens": 4000,
+        "max_completion_tokens": 8000,
+        "temperature": 0.2,
     }
     request = urllib.request.Request(
         f"{config.MINIMAX_API_BASE.rstrip('/')}/chat/completions",
@@ -166,15 +277,50 @@ def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
+        with urllib.request.urlopen(request, timeout=300) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"MiniMax planner request failed: {exc.code} {detail}") from exc
 
+    _append_raw_minimax_payload(payload, f"batch {batch_index}/{batch_total}")
     text = _extract_response_text(payload)
-    parsed = json.loads(_extract_json_block(text))
-    return parsed["scenes"]
+    return _parse_minimax_scene_lines(text, segments)
+
+
+_MINIMAX_BATCH_RETRIES = 3
+
+
+def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    config.ensure_dirs()
+    with open(config.MINIMAX_RAW_PAYLOAD, "w", encoding="utf-8") as handle:
+        handle.write("")
+    with open(config.MINIMAX_RAW_RESPONSE, "w", encoding="utf-8") as handle:
+        handle.write("")
+
+    all_scenes = []
+    batches = _chunk_segments(segments, config.MINIMAX_PLANNER_BATCH_SIZE)
+    batch_total = len(batches)
+    for batch_offset, batch_segments in enumerate(batches, 1):
+        last_exc: Exception | None = None
+        for attempt in range(1, _MINIMAX_BATCH_RETRIES + 1):
+            try:
+                batch_scenes = _plan_with_minimax_batch(
+                    batch_segments,
+                    batch_index=batch_offset,
+                    batch_total=batch_total,
+                )
+                if attempt > 1:
+                    print(f"[image] batch {batch_offset}/{batch_total} succeeded on attempt {attempt}.")
+                all_scenes.extend(batch_scenes)
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                print(f"[image] batch {batch_offset}/{batch_total} attempt {attempt} failed: {exc}")
+        if last_exc is not None:
+            raise last_exc
+    return all_scenes
 
 
 def _heuristic_scene_change(current_text: str, next_text: str) -> bool:
@@ -201,6 +347,101 @@ def _heuristic_scene_change(current_text: str, next_text: str) -> bool:
     return overlap <= 1
 
 
+def _visual_thread_tokens(text: str) -> set[str]:
+    tokens = set(re.findall(r"[a-z]{4,}", text.lower()))
+    stop_words = {
+        "about",
+        "after",
+        "almost",
+        "because",
+        "being",
+        "brain",
+        "could",
+        "every",
+        "first",
+        "from",
+        "have",
+        "just",
+        "like",
+        "more",
+        "most",
+        "only",
+        "other",
+        "people",
+        "right",
+        "same",
+        "some",
+        "that",
+        "their",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "through",
+        "until",
+        "very",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "with",
+        "would",
+        "your",
+    }
+    return {token for token in tokens if token not in stop_words}
+
+
+def _same_visual_thread(previous_scene: dict[str, Any], transcript: str) -> bool:
+    previous_tokens = _visual_thread_tokens(previous_scene["transcript"])
+    current_tokens = _visual_thread_tokens(transcript)
+    shared = previous_tokens & current_tokens
+    if len(shared) >= 2:
+        return True
+
+    anchor_terms = {
+        "brain",
+        "hospital",
+        "scanner",
+        "scientists",
+        "myth",
+        "city",
+        "streetlight",
+        "memory",
+        "neurons",
+        "attention",
+        "stress",
+        "practice",
+        "sleep",
+        "reading",
+        "scrolling",
+        "writer",
+        "pianist",
+        "surgeon",
+    }
+    if (previous_tokens & anchor_terms) and (current_tokens & anchor_terms):
+        return True
+
+    previous_summary = previous_scene.get("summary", "").lower()
+    current_text = transcript.lower()
+    if any(
+        phrase in previous_summary and phrase in current_text
+        for phrase in (
+            "10%",
+            "brain",
+            "city",
+            "scientists",
+            "memory",
+            "attention",
+            "practice",
+        )
+    ):
+        return True
+
+    return False
+
+
 def _plan_with_heuristics(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     scenes: list[dict[str, Any]] = []
     for row in segments:
@@ -210,10 +451,13 @@ def _plan_with_heuristics(segments: list[dict[str, Any]]) -> list[dict[str, Any]
         scene_change = "hard"
         continue_from_previous = False
         reference_mode = "none"
-        if previous is not None and not _heuristic_scene_change(previous["transcript"], transcript):
+        if previous is not None and (
+            _same_visual_thread(previous, transcript)
+            or not _heuristic_scene_change(previous["transcript"], transcript)
+        ):
             scene_change = "soft"
             continue_from_previous = True
-            reference_mode = "soft"
+            reference_mode = "strong" if _same_visual_thread(previous, transcript) else "soft"
         scenes.append(
             {
                 "scene_number": int(row.get("index", len(scenes) + 1)),
@@ -367,7 +611,6 @@ async def _generate_one_image(
     request = IImageInference(
         model=config.IMAGE_MODEL,
         positivePrompt=_compose_prompt(scene),
-        negativePrompt=config.IMAGE_NEGATIVE_PROMPT,
         width=config.IMAGE_WIDTH,
         height=config.IMAGE_HEIGHT,
         outputFormat="PNG",

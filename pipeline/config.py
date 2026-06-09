@@ -71,6 +71,8 @@ TRANSCRIPT_SRT = os.path.join(TRANSCRIPTS_DIR, "segments.srt")
 FINAL_VIDEO = os.path.join(VIDEO_DIR, "final_video.mp4")
 SCENE_PLAN_JSON = os.path.join(IMAGE_PLAN_DIR, "scene_plan.json")
 SCENE_PLAN_TXT = os.path.join(IMAGE_PLAN_DIR, "scene_prompts.txt")
+MINIMAX_RAW_RESPONSE = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_response.txt")
+MINIMAX_RAW_PAYLOAD = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_payload.json")
 IMAGE_PROMPT_STYLE = (
     "Cinematic digital illustration with strong composition, coherent anatomy, "
     "high detail, dramatic but natural lighting, storybook realism, crisp focus, "
@@ -81,7 +83,7 @@ IMAGE_NEGATIVE_PROMPT = (
     "text, watermark, logo, flat lighting, muddy colors, collage layout, split screen"
 )
 IMAGE_MODEL = os.environ.get("RUNWARE_IMAGE_MODEL", "openai:gpt-image@2")
-IMAGE_PROVIDER_QUALITY = os.environ.get("RUNWARE_IMAGE_QUALITY", "high")
+IMAGE_PROVIDER_QUALITY = os.environ.get("RUNWARE_IMAGE_QUALITY", "low")
 IMAGE_PROVIDER_MODERATION = os.environ.get("RUNWARE_IMAGE_MODERATION", "auto")
 IMAGE_WIDTH = 1792
 IMAGE_HEIGHT = 1024
@@ -90,6 +92,7 @@ SCENE_MAX_SECONDS = 11.0
 SCENE_MIN_SECONDS = 3.0
 REFERENCE_SOFT_STRENGTH = 0.35
 REFERENCE_STRONG_STRENGTH = 0.60
+MINIMAX_PLANNER_BATCH_SIZE = 20
 
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080
