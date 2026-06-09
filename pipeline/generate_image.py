@@ -508,7 +508,7 @@ def _normalize_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         elif reference_mode == "strong":
             reference_strength = config.REFERENCE_STRONG_STRENGTH
         timestamp_prefix = _timestamp_slug(start)
-        image_name = f"{timestamp_prefix}_{index:04d}_{_slugify(summary)}.png"
+        image_name = f"{timestamp_prefix}.png"
         scene_number = int(scene.get("scene_number", index))
         normalized.append(
             {

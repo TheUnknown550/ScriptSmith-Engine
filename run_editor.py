@@ -18,8 +18,8 @@ def main():
     )
     parser.add_argument(
         "--images",
-        default=config.DEFAULT_IMAGE_DIR,
-        help=f"Folder containing scene images. Defaults to {config.DEFAULT_IMAGE_DIR}.",
+        default=config.IMAGE_DIR,
+        help=f"Folder containing scene images. Defaults to {config.IMAGE_DIR}.",
     )
     parser.add_argument(
         "--audio",
@@ -48,8 +48,10 @@ def main():
     if not os.path.isdir(args.images):
         raise NotADirectoryError(f"Image folder not found: {args.images}")
 
+    use_filename_timestamps = args.use_filename_timestamps or editor.images_have_filename_timestamps(args.images)
+
     segments = None
-    if not args.use_filename_timestamps:
+    if not use_filename_timestamps:
         if not os.path.exists(args.segments):
             raise FileNotFoundError(
                 f"Transcript JSON not found: {args.segments}. "
@@ -62,7 +64,7 @@ def main():
         audio_path=args.audio,
         output_path=args.output,
         segments=segments,
-        use_filename_timestamps=args.use_filename_timestamps,
+        use_filename_timestamps=use_filename_timestamps,
     )
 
 

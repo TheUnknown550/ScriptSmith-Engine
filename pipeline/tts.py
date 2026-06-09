@@ -126,15 +126,17 @@ def _chunk_pause_ms(chunk_text, paragraph_break=False):
 def _build_chunk_prompt(chunk_text, index, total, prev_chunk=None, next_chunk=None):
     context_lines = [
         config.GEMINI_TTS_STYLE or "",
-        f"This is excerpt {index} of {total} from one continuous narration.",
-        "Keep it sounding like the exact same narrator as the previous excerpt.",
-        "Do not change accent, age, character, recording setup, energy, or pacing.",
-        "Read only the EXCERPT text aloud.",
+        f"This is part {index} of {total} from one continuous narration recording.",
+        "This is not a separate read — it is a seamless continuation of the same recording session.",
+        "Keep the exact same narrator: same voice, same accent, same microphone distance, same energy level.",
+        "Maintain the exact same speaking rate throughout — do not speed up or slow down.",
+        "Do not add extra breath pauses, preambles, or trailing silence.",
+        "Read only the EXCERPT text below aloud, nothing else.",
     ]
     if prev_chunk:
-        context_lines.append(f"Previous excerpt context only: {prev_chunk[-220:]}")
+        context_lines.append(f"Preceding text (for continuity, do not re-read): {prev_chunk[-220:]}")
     if next_chunk:
-        context_lines.append(f"Upcoming excerpt context only: {next_chunk[:220]}")
+        context_lines.append(f"Following text (for continuity, do not pre-read): {next_chunk[:220]}")
     context_lines.append("EXCERPT:")
     context_lines.append(chunk_text)
     return "\n".join(context_lines)
@@ -161,6 +163,56 @@ def _build_full_script_prompt(text):
             text,
         ]
     )
+
+
+def _determine_chunk_count(word_count: int) -> int:
+    if word_count <= 400:
+        return 1
+    if word_count <= 800:
+        return 2
+    if word_count <= 1200:
+        return 3
+    return 4
+
+
+def _split_into_n_chunks(text: str, n: int) -> list[str]:
+    """Split text into exactly n chunks at sentence boundaries, as evenly as possible by word count."""
+    normalized = _normalize_text(text)
+    if n == 1:
+        return [normalized]
+
+    sentences: list[str] = []
+    for para in normalized.split("\n\n"):
+        if para.strip():
+            sentences.extend(_split_sentences(para))
+    sentences = [s for s in sentences if s.strip()]
+
+    if not sentences:
+        return [normalized]
+    if len(sentences) <= n:
+        return sentences
+
+    total_words = sum(len(s.split()) for s in sentences)
+    target = total_words / n
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_words = 0
+
+    for i, sentence in enumerate(sentences):
+        current.append(sentence)
+        current_words += len(sentence.split())
+        sentences_left = len(sentences) - i - 1
+        chunks_left = n - len(chunks) - 1
+        if current_words >= target and sentences_left >= chunks_left and chunks_left > 0:
+            chunks.append(" ".join(current).strip())
+            current = []
+            current_words = 0
+
+    if current:
+        chunks.append(" ".join(current).strip())
+
+    return [c for c in chunks if c.strip()]
 
 
 def _is_retryable_tts_error(exc):
@@ -436,24 +488,38 @@ def _synthesize_chunked(text):
     return _crossfade_join(parts, config.TTS_SAMPLE_RATE, config.TTS_JOIN_CROSSFADE_MS)
 
 
+def _synthesize_n_chunks(text: str) -> np.ndarray:
+    normalized = _normalize_text(text)
+    word_count = len(normalized.split())
+    n = _determine_chunk_count(word_count)
+    chunks = _split_into_n_chunks(normalized, n)
+    actual = len(chunks)
+    print(f"[tts] {word_count} words → {actual} request(s)...")
+
+    parts: list[np.ndarray] = []
+    for index, chunk_text in enumerate(chunks, 1):
+        prev_chunk = chunks[index - 2] if index > 1 else None
+        next_chunk = chunks[index] if index < actual else None
+        started = time.time()
+        chunk_audio = _trim_silence(
+            _synthesize_chunk_audio(chunk_text, index, actual, prev_chunk=prev_chunk, next_chunk=next_chunk),
+            config.TTS_SAMPLE_RATE,
+        )
+        chunk_audio = _match_chunk_loudness(chunk_audio, config.TTS_TARGET_RMS, config.TTS_PEAK_LIMIT)
+        parts.append(chunk_audio)
+        if index < actual:
+            parts.append(_silence(config.TTS_SAMPLE_RATE, _chunk_pause_ms(chunk_text)))
+        print(f"[tts] part {index}/{actual} done in {time.time() - started:.0f}s")
+
+    joined = _crossfade_join(parts, config.TTS_SAMPLE_RATE, config.TTS_JOIN_CROSSFADE_MS)
+    # Global loudness pass so the full joined audio lands at the target level
+    return _match_chunk_loudness(joined, config.TTS_TARGET_RMS, config.TTS_PEAK_LIMIT)
+
+
 def synthesize_full(text, out_path=None, final_atempo=None):
     output_path = out_path or config.FULL_AUDIO
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    normalized_text = _normalize_text(text)
-    try:
-        print("[tts] generating narration in 1 request...")
-        audio = _trim_silence(
-            _request_chunk_audio(_build_full_script_prompt(normalized_text)),
-            config.TTS_SAMPLE_RATE,
-        )
-        audio = _match_chunk_loudness(
-            audio,
-            config.TTS_TARGET_RMS,
-            config.TTS_PEAK_LIMIT,
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"[tts] single-request generation failed, falling back to chunks: {exc}")
-        audio = _synthesize_chunked(normalized_text)
+    audio = _synthesize_n_chunks(text)
     target_atempo = config.TTS_FINAL_ATEMPO if final_atempo is None else final_atempo
     audio = _apply_final_atempo(audio, config.TTS_SAMPLE_RATE, target_atempo)
     audio = _trim_silence(audio, config.TTS_SAMPLE_RATE)
