@@ -21,6 +21,8 @@ VIDEO_DIR = os.path.join(OUTPUT_DIR, "video")
 TEMP_DIR = os.path.join(OUTPUT_DIR, "temp")
 IMAGE_DIR = os.path.join(OUTPUT_DIR, "images")
 IMAGE_PLAN_DIR = os.path.join(OUTPUT_DIR, "image_plan")
+SFX_DIR = os.path.join(OUTPUT_DIR, "sfx")
+SFX_PLAN_DIR = os.path.join(OUTPUT_DIR, "sfx_plan")
 DEFAULT_IMAGE_DIR = r"D:\mattc\Documents\Creative\Mythoz\vdos\What If The Moon Disappeared Tomorrow\img"
 
 TTS_SAMPLE_RATE = 24000
@@ -31,6 +33,9 @@ MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 MINIMAX_API_BASE = os.environ.get("MINIMAX_API_BASE", "https://api.minimaxi.com/v1")
 MINIMAX_SCENE_MODEL = os.environ.get("MINIMAX_SCENE_MODEL", "MiniMax-M3")
 RUNWARE_API_KEY = os.environ.get("RUNWARE_API_KEY", "")
+FREESOUND_API_KEY = os.environ.get("FREESOUND_API_KEY", "")
+FREESOUND_CLIENT_ID = os.environ.get("FREESOUND_CLIENT_ID", "")
+FREESOUND_CLIENT_SECRET = os.environ.get("FREESOUND_CLIENT_SECRET", "")
 GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
 GEMINI_TTS_VOICE = "Achird"
 GEMINI_TTS_STYLE = (
@@ -65,6 +70,12 @@ TRANSCRIPT_TARGET_SEGMENT_SECONDS = 2.8
 TRANSCRIPT_MAX_SEGMENT_SECONDS = 4.0
 
 FULL_AUDIO = os.path.join(AUDIO_DIR, "full.wav")
+FULL_AUDIO_SFX = os.path.join(AUDIO_DIR, "full_with_sfx.wav")
+SFX_PLAN_JSON = os.path.join(SFX_PLAN_DIR, "sfx_plan.json")
+SFX_MAX_DURATION_SECONDS = 8.0
+SFX_MIN_INTERVAL_SECONDS = 20.0
+SFX_HIT_VOLUME = 0.45
+SFX_AMBIENT_VOLUME = 0.20
 TRANSCRIPT_JSON = os.path.join(TRANSCRIPTS_DIR, "segments.json")
 TRANSCRIPT_TXT = os.path.join(TRANSCRIPTS_DIR, "segments.txt")
 TRANSCRIPT_SRT = os.path.join(TRANSCRIPTS_DIR, "segments.srt")
@@ -109,6 +120,8 @@ def ensure_dirs():
         TEMP_DIR,
         IMAGE_DIR,
         IMAGE_PLAN_DIR,
+        SFX_DIR,
+        SFX_PLAN_DIR,
     ):
         os.makedirs(path, exist_ok=True)
 
