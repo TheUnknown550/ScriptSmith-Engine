@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import random
@@ -12,7 +13,7 @@ import urllib.request
 from typing import Any
 from uuid import uuid4
 
-from runware import IImageInference, IInputReference, IInputs, IOpenAIProviderSettings, Runware
+from runware import IImageInference, IInputs, IOpenAIProviderSettings, Runware
 
 from . import config
 
@@ -509,10 +510,9 @@ def _normalize_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             reference_strength = config.REFERENCE_STRONG_STRENGTH
         timestamp_prefix = _timestamp_slug(start)
         image_name = f"{timestamp_prefix}.png"
-        scene_number = int(scene.get("scene_number", index))
         normalized.append(
             {
-                "scene_number": scene_number,
+                "scene_number": index,
                 "start": start,
                 "end": end,
                 "duration": max(0.1, end - start),
@@ -592,21 +592,15 @@ async def _generate_one_image(
     os.makedirs(image_dir, exist_ok=True)
     output_path = os.path.join(image_dir, scene["image_name"])
     if os.path.exists(output_path):
-        print(f"[image] skipping existing scene {scene['scene_number']}: {output_path}")
+        print(f"[image] scene {scene['scene_number']}: already exists, skipping")
         return output_path
 
+    print(f"[image] scene {scene['scene_number']}: generating (mode={scene['reference_mode']})...")
     inputs = None
     if scene["continue_from_previous"] and previous_image_path and os.path.exists(previous_image_path):
-        inputs = IInputs(
-            referenceImages=[
-                IInputReference(
-                    image=previous_image_path,
-                    role="style",
-                    tag="previous_scene",
-                    strength=scene["reference_strength"],
-                )
-            ]
-        )
+        with open(previous_image_path, "rb") as _fh:
+            _b64 = base64.b64encode(_fh.read()).decode("utf-8")
+        inputs = IInputs(referenceImages=[f"data:image/png;base64,{_b64}"])
 
     request = IImageInference(
         model=config.IMAGE_MODEL,
@@ -667,23 +661,61 @@ async def generate_images(
     runware = Runware(api_key=config.RUNWARE_API_KEY)
     await runware.connect()
 
-    outputs = []
-    for scene in selected_scenes:
-        previous_image_path = None
+    # Build a sorted list of all scene numbers for prerequisite lookups
+    all_nums_sorted = sorted(int(s["scene_number"]) for s in scenes)
+
+    def _prerequisite_num(scene_number: int) -> int | None:
+        try:
+            idx = all_nums_sorted.index(scene_number)
+        except ValueError:
+            return None
+        return all_nums_sorted[idx - 1] if idx > 0 else None
+
+    # One asyncio.Event per scene — fires when that scene's image is on disk.
+    # Pre-set for images that already exist so dependent scenes don't wait needlessly.
+    done: dict[int, asyncio.Event] = {}
+    for scene in scenes:
+        ev = asyncio.Event()
+        if os.path.exists(os.path.join(target_dir, scene["image_name"])):
+            ev.set()
+        done[int(scene["scene_number"])] = ev
+
+    semaphore = asyncio.Semaphore(config.IMAGE_GENERATION_CONCURRENCY)
+
+    async def _generate_scene(scene: dict[str, Any]) -> str:
+        scene_num = int(scene["scene_number"])
+
+        # Dependent scenes wait until their reference image is written before grabbing the semaphore
         if scene["continue_from_previous"]:
-            previous_image_path = _find_previous_generated_image(
-                int(scene["scene_number"]),
-                scenes,
-                target_dir,
-            )
-        output_path = await _generate_one_image(
-            runware,
-            scene,
-            target_dir,
-            previous_image_path=previous_image_path,
-        )
-        outputs.append(output_path)
-    return outputs
+            prereq = _prerequisite_num(scene_num)
+            if prereq is not None and prereq in done:
+                await done[prereq].wait()
+
+        prev_path = None
+        if scene["continue_from_previous"]:
+            prev_path = _find_previous_generated_image(scene_num, scenes, target_dir)
+
+        async with semaphore:
+            result = await _generate_one_image(runware, scene, target_dir, previous_image_path=prev_path)
+
+        done[scene_num].set()
+        return result
+
+    n_ind = sum(1 for s in selected_scenes if not s["continue_from_previous"])
+    n_dep = sum(1 for s in selected_scenes if s["continue_from_previous"])
+    print(
+        f"[image] queuing {len(selected_scenes)} scene(s): "
+        f"{n_ind} independent, {n_dep} dependent (each waits only for its direct reference) "
+        f"— up to {config.IMAGE_GENERATION_CONCURRENCY} running at once..."
+    )
+
+    await asyncio.gather(*[_generate_scene(s) for s in selected_scenes])
+
+    return [
+        os.path.join(target_dir, s["image_name"])
+        for s in selected_scenes
+        if os.path.exists(os.path.join(target_dir, s["image_name"]))
+    ]
 
 
 def create_scene_plan(transcript_path: str | None = None) -> list[dict[str, Any]]:

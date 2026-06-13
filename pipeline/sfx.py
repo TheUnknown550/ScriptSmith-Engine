@@ -43,6 +43,28 @@ def _download_preview(preview_url: str, dest_path: str) -> None:
         handle.write(data)
 
 
+def _trim_leading_silence(path: str) -> None:
+    """Strip leading silence from an SFX file in-place so adelay lands on the actual sound onset."""
+    ffmpeg = config.find_ffmpeg()
+    if not ffmpeg:
+        return
+    tmp = path + ".trimmed.mp3"
+    try:
+        subprocess.run(
+            [
+                ffmpeg, "-y", "-i", path,
+                "-af", "silenceremove=start_periods=1:start_silence=0.05:start_threshold=-40dB",
+                tmp,
+            ],
+            check=True,
+            capture_output=True,
+        )
+        os.replace(tmp, path)
+    except Exception:  # noqa: BLE001
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
 def _simplify_query(query: str) -> str:
     """Strip adjectives and keep the last 1-2 meaningful words as a fallback."""
     words = query.split()
@@ -231,6 +253,7 @@ def download_sfx_for_plan(
             print(f"[sfx] scene {scene_num}: no results for '{item['sfx_query']}', skipping.")
             continue
 
+        _trim_leading_silence(dest)
         print(f"[sfx] scene {scene_num}: downloaded '{info['name']}' ({info['duration']:.1f}s)")
         enriched.append({**item, **info})
 

@@ -37,14 +37,15 @@ FREESOUND_API_KEY = os.environ.get("FREESOUND_API_KEY", "")
 FREESOUND_CLIENT_ID = os.environ.get("FREESOUND_CLIENT_ID", "")
 FREESOUND_CLIENT_SECRET = os.environ.get("FREESOUND_CLIENT_SECRET", "")
 GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
-GEMINI_TTS_VOICE = "Achird"
+GEMINI_TTS_VOICE = "Charon"
 GEMINI_TTS_STYLE = (
-    "Read this as cinematic story narration in a dry, deadpan, slightly sarcastic "
-    "documentary voice. Keep the pacing steady, controlled, and easy to follow. "
-    "Speak slightly slower than normal conversation. Pause briefly at commas, pause "
-    "more clearly at sentence endings, and let major paragraph transitions breathe. "
-    "Do not rush key lines. Maintain the same delivery style, speaker identity, tone, "
-    "mic distance, and tempo throughout the full narration: "
+    "You are a confident, engaging YouTube narrator for a documentary-style video. "
+    "Deliver the narration with consistent energy — warm, authoritative, and clear throughout. "
+    "Speak at a steady, natural pace: not too fast, not too slow. "
+    "Emphasise key words naturally without overdoing it. "
+    "Pause briefly at commas, more clearly at full stops, and give paragraph breaks a full breath. "
+    "Never rush. Never trail off. Keep the same voice, tone, and mic presence from first word to last. "
+    "Do not add any intro, outro, or commentary — read only the text given: "
 )
 TTS_MAX_INPUT_CHARS = 24000
 TTS_MAX_OUTPUT_TOKENS = 16384
@@ -52,11 +53,11 @@ TTS_OUTPUT_TOKENS_PER_SECOND = 32
 TTS_REQUEST_MARGIN = 0.95
 TTS_MAX_CHUNK_CHARS = 2800
 TTS_MAX_CHUNK_WORDS = 220
-TTS_JOIN_CROSSFADE_MS = 0
-TTS_SHORT_PAUSE_MS = 120
-TTS_MEDIUM_PAUSE_MS = 220
-TTS_LONG_PAUSE_MS = 420
-TTS_TARGET_RMS = 0.11
+TTS_JOIN_CROSSFADE_MS = 80
+TTS_SHORT_PAUSE_MS = 150
+TTS_MEDIUM_PAUSE_MS = 300
+TTS_LONG_PAUSE_MS = 560
+TTS_TARGET_RMS = 0.14
 TTS_PEAK_LIMIT = 0.98
 TTS_FINAL_ATEMPO = 1
 TTS_API_RETRIES = 4
@@ -104,6 +105,7 @@ SCENE_MIN_SECONDS = 3.0
 REFERENCE_SOFT_STRENGTH = 0.35
 REFERENCE_STRONG_STRENGTH = 0.60
 MINIMAX_PLANNER_BATCH_SIZE = 20
+IMAGE_GENERATION_CONCURRENCY = 5
 
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080

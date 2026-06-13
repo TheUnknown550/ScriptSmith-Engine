@@ -1,13 +1,13 @@
 # Auto Editor
 
-This project now has three separate parts:
+A four-step pipeline that turns a `script.txt` into a fully edited YouTube video with narration, AI-planned scene images, and sound effects.
 
-1. `run_pipeline.py`
-   Turns `script.txt` into narration audio and timestamp files.
-2. `run_image_generate.py`
-   Turns transcript segments into scene prompts and generated images.
-3. `run_editor.py`
-   Turns your scene images into a synced video using the narration audio.
+```
+run_pipeline.py         →  narration audio + timestamps
+run_image_generate.py   →  scene plan + AI images
+run_sfx.py              →  sound effects mixed into audio
+run_editor.py           →  final video
+```
 
 ## Setup
 
@@ -16,82 +16,162 @@ This project now has three separate parts:
 pip install -r requirements.txt
 ```
 
-## Part 1: Audio + Timestamps
+Set your API keys in `.env`:
+
+```
+GOOGLE_API_KEY=        # Gemini TTS
+MINIMAX_API_KEY=       # Scene planning + SFX planning
+RUNWARE_API_KEY=       # Image generation
+FREESOUND_API_KEY=     # SFX search and download
+FREESOUND_CLIENT_ID=   # Freesound app client ID
+FREESOUND_CLIENT_SECRET=
+```
+
+---
+
+## Part 1 — Audio + Timestamps
+
+Reads `script.txt`, generates narration with Gemini TTS, and transcribes it into per-segment timestamps.
 
 ```powershell
 python run_pipeline.py
 ```
 
-For slightly slower story pacing, you can also run:
+For slightly slower pacing:
 
 ```powershell
 python run_pipeline.py --pace 0.90
 ```
 
-Outputs:
+Reuse existing audio and only regenerate timestamps:
 
+```powershell
+python run_pipeline.py --skip-tts
+```
+
+**Outputs:**
 - `output/audio/full.wav`
 - `output/transcripts/segments.json`
 - `output/transcripts/segments.txt`
 - `output/transcripts/segments.srt`
 
-## Part 2: Scene Planning + Image Generation
+The script is split into 1–4 requests depending on word count (≤400 words = 1 request, 1200+ words = 4 requests). Each chunk is loudness-normalised and crossfaded at the join so the result sounds like one continuous recording.
 
-Set these keys in `.env`:
+---
 
-- `MINIMAX_API_KEY` for scene planning with `MiniMax-M3`
-- `RUNWARE_API_KEY` for image generation
+## Part 2 — Scene Planning + Image Generation
 
-Build only the scene plan:
+Uses MiniMax M3 to read transcript segments and write one image prompt per scene. Images are generated via Runware (GPT Image 2).
+
+Build only the scene plan (no images generated, fast):
 
 ```powershell
 python run_image_generate.py --plan-only
 ```
 
-Build the scene plan and generate images:
+Build scene plan and generate all images:
 
 ```powershell
 python run_image_generate.py
 ```
 
-Reuse the existing scene plan and generate images only:
+Reuse existing scene plan and generate images only:
 
 ```powershell
 python run_image_generator.py --generate-only
 ```
 
-Generate one random scene to test the image stack:
+Generate one random scene to test image quality:
 
 ```powershell
 python run_image_generator.py --generate-only --test
 ```
 
-Outputs:
-
+**Outputs:**
 - `output/image_plan/scene_plan.json`
 - `output/image_plan/scene_prompts.txt`
-- `output/images/*.png`
+- `output/images/<timestamp>.png`
 
-The planner uses MiniMax M3 to group transcript rows into larger visual scenes and decides when to carry the previous image forward as a soft reference. If `MINIMAX_API_KEY` is missing, it falls back to a local heuristic planner.
-Generated image filenames now begin with transcript timestamps like `00-12-340_0003_scene-name.png`, so you can use `run_editor.py --use-filename-timestamps` directly.
+Image filenames are timestamp-only (e.g. `01-40-700.png`) so the editor can read them directly without needing the transcript.
 
-## Part 3: Editor
+To control image quality and cost, set in `.env`:
 
-If your images are one-per-transcript-segment, run:
+```
+RUNWARE_IMAGE_QUALITY=low     # $0.006/image  ← default
+RUNWARE_IMAGE_QUALITY=medium  # $0.053/image
+RUNWARE_IMAGE_QUALITY=high    # $0.211/image
+```
+
+If `MINIMAX_API_KEY` is missing the planner falls back to a local heuristic.
+
+---
+
+## Part 3 — Sound Effects
+
+Uses MiniMax to decide which scenes get a sound effect, searches Freesound for each, downloads the audio, and mixes it into the narration at the correct timestamp.
+
+Plan SFX and download files (no mixing yet — good for reviewing choices):
+
+```powershell
+python run_sfx.py --plan-only
+```
+
+Full run — plan, download, and mix:
+
+```powershell
+python run_sfx.py
+```
+
+Reuse existing SFX plan and only re-mix:
+
+```powershell
+python run_sfx.py --mix-only
+```
+
+**Outputs:**
+- `output/sfx_plan/sfx_plan.json` — which scenes get SFX, what was found, volume levels
+- `output/sfx/*.mp3` — downloaded Freesound previews (cached, reused on reruns)
+- `output/audio/full_with_sfx.wav` — narration with SFX mixed in
+
+**How density is controlled:**
+- 1 SFX per ~20 seconds of video maximum
+- MiniMax targets hard scene changes, major reveals, the first scene, and the last scene
+- Narration stays at full volume; SFX are layered underneath at 0.15–0.55 volume
+- Leading silence is stripped from each SFX file so the hit lands exactly on the scene change
+
+To adjust volumes or swap a sound, edit `output/sfx_plan/sfx_plan.json` and run `--mix-only`.
+
+---
+
+## Part 4 — Editor
+
+Stitches scene images into a video synced to the narration audio.
+
+Using the AI-generated images (default):
+
+```powershell
+python run_editor.py
+```
+
+Using images from a custom folder:
 
 ```powershell
 python run_editor.py --images "D:\path\to\img"
 ```
 
-If your image filenames already contain timestamps like `0-06.png`, `1-29.png`, run:
+Using the SFX-mixed audio:
 
 ```powershell
-python run_editor.py --images "D:\path\to\img" --use-filename-timestamps
+python run_editor.py --audio output\audio\full_with_sfx.wav
 ```
 
-Output:
+Full run with custom images and SFX audio:
 
+```powershell
+python run_editor.py --images "D:\path\to\img" --audio output\audio\full_with_sfx.wav
+```
+
+**Output:**
 - `output/video/final_video.mp4`
 
-The editor now keeps each image static and adds only quick fade in/out transitions so the scene changes feel cleaner than a hard image swap.
-If your FFmpeg build supports it, the editor will use NVIDIA GPU encoding (`h264_nvenc`) automatically and fall back to CPU encoding otherwise.
+The editor auto-detects whether your images have timestamp filenames (e.g. `01-40-700.png`) and uses them as timeline anchors. If they don't, it falls back to pairing images to transcript segments in order. GPU encoding (`h264_nvenc`) is used automatically if available.

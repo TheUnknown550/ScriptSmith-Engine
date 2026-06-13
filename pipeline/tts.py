@@ -22,7 +22,7 @@ def _get_genai_client():
     return _genai_client
 
 
-def _trim_silence(audio, sr, thresh=0.015, head_ms=30, tail_ms=120):
+def _trim_silence(audio, sr, thresh=0.015, head_ms=20, tail_ms=60):
     if audio.size == 0:
         return audio
     above = np.where(np.abs(audio) > thresh)[0]
