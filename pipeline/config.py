@@ -83,16 +83,20 @@ TRANSCRIPT_SRT = os.path.join(TRANSCRIPTS_DIR, "segments.srt")
 FINAL_VIDEO = os.path.join(VIDEO_DIR, "final_video.mp4")
 SCENE_PLAN_JSON = os.path.join(IMAGE_PLAN_DIR, "scene_plan.json")
 SCENE_PLAN_TXT = os.path.join(IMAGE_PLAN_DIR, "scene_prompts.txt")
+BACKGROUND_PLAN_JSON = os.path.join(IMAGE_PLAN_DIR, "background.json")
+BACKGROUND_IMAGE = os.path.join(IMAGE_PLAN_DIR, "background_reference.png")
 MINIMAX_RAW_RESPONSE = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_response.txt")
 MINIMAX_RAW_PAYLOAD = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_payload.json")
 IMAGE_PROMPT_STYLE = (
-    "Cinematic digital illustration with strong composition, coherent anatomy, "
-    "high detail, dramatic but natural lighting, storybook realism, crisp focus, "
-    "clean silhouettes, and a consistent visual identity across the full video."
+    "Extremely simple beginner MS Paint drawing, thick uneven black outlines, "
+    "wobbly hand-drawn lines, flat colors only, stick figure humans with round heads "
+    "and line bodies, very basic faces, intentionally amateur and slightly funny, "
+    "clear readable composition, and a consistent visual identity across the full video."
 )
 IMAGE_NEGATIVE_PROMPT = (
     "blurry, low detail, deformed anatomy, duplicated subjects, extra limbs, "
-    "text, watermark, logo, flat lighting, muddy colors, collage layout, split screen"
+    "text, watermark, logo, muddy colors, collage layout, split screen, "
+    "blank white background, empty studio backdrop, isolated subject on white"
 )
 IMAGE_MODEL = os.environ.get("RUNWARE_IMAGE_MODEL", "openai:gpt-image@2")
 IMAGE_PROVIDER_QUALITY = os.environ.get("RUNWARE_IMAGE_QUALITY", "low")

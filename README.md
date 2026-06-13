@@ -61,7 +61,7 @@ The script is split into 1–4 requests depending on word count (≤400 words = 
 
 ## Part 2 — Scene Planning + Image Generation
 
-Uses MiniMax M3 to read transcript segments and write one image prompt per scene. Images are generated via Runware (GPT Image 2).
+Uses MiniMax M3 to read transcript segments and write one image prompt per scene. It also creates a transcript-level `background.json` plus one shared background reference image so each scene keeps the same setting instead of floating on a white background. Images are generated via Runware (GPT Image 2).
 
 Build only the scene plan (no images generated, fast):
 
@@ -89,6 +89,8 @@ python run_image_generator.py --generate-only --test
 
 **Outputs:**
 - `output/image_plan/scene_plan.json`
+- `output/image_plan/background.json`
+- `output/image_plan/background_reference.png`
 - `output/image_plan/scene_prompts.txt`
 - `output/images/<timestamp>.png`
 

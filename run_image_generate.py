@@ -50,6 +50,7 @@ def main():
         scene_plan_path=args.scene_plan,
     )
     print(f"Wrote scene plan: {result['scene_plan_path']}")
+    print(f"Wrote background plan: {result['background_plan_path']}")
     print(f"Planned scenes: {result['scene_count']}")
     if not args.plan_only:
         print(f"Wrote images to: {result['image_dir']}")

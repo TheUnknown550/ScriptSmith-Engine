@@ -45,6 +45,24 @@ def _timestamp_slug(seconds: float) -> str:
     return f"{minutes:02d}-{secs:02d}-{millis:03d}"
 
 
+def _extract_json_object(text: str) -> dict[str, Any]:
+    cleaned = _strip_model_wrappers(text)
+    try:
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+    if not match:
+        raise RuntimeError("Planner response did not contain a JSON object.")
+    parsed = json.loads(match.group(0))
+    if not isinstance(parsed, dict):
+        raise RuntimeError("Planner JSON response was not an object.")
+    return parsed
+
+
 def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
     transcript_lines = []
     for row in segments:
@@ -73,29 +91,33 @@ def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
             "Use scene_change=soft with reference_mode=soft or strong only for neighboring shots that should feel connected.",
             "Write prompts for still-image generation, not for animation or video.",
             "Every prompt must include a clear subject, the simple environment, the emotion, and the idea being explained.",
+            "Every prompt must include a visible background or setting, even if the background is simple.",
+            "The setting should help the viewer immediately understand where the story is happening.",
             "Style requirements for every prompt:",
             "- extremely simple beginner drawings made in MS Paint",
-            "- white background",
             "- thick uneven black outlines",
             "- wobbly hand-drawn lines",
             "- stick figure humans with round heads and line bodies",
             "- simple dot eyes or circle eyes",
             "- very basic facial expressions",
             "- flat colors only",
-            "- mostly empty white space",
+            "- simple hand-drawn backgrounds with only the most important shapes and props",
+            "- backgrounds should be clear but not detailed",
+            "- keep lots of open space, but not an empty white void",
             "- occasional flat colors like green, brown, gray, red, yellow, orange, and blue",
             "- red arrows or red question marks only when helpful",
             "- handwritten text only when it helps explain the idea",
             "- if text appears, it must be short, spelled correctly, and easy to read",
             "- 16:9 horizontal YouTube frame",
             "Things to avoid in every prompt:",
+            "- blank white background",
             "- realistic shading",
             "- 3D",
             "- cinematic lighting",
             "- polished illustration",
             "- anime or Disney style",
             "- realistic humans",
-            "- detailed backgrounds",
+            "- highly detailed backgrounds",
             "- complex textures",
             "- glossy modern design",
             "The drawings should feel amateur, funny, simple, and intentionally bad, like a beginner drew them quickly in Paint.",
@@ -106,13 +128,50 @@ def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
             "- Return exactly one line per segment.",
             "- Use this exact delimiter between fields: |||",
             "- Each line must follow this exact format (replace each field with its real value):",
-            "  1|||hard|||false|||none|||Man walks into hospital brain scanner|||MS Paint drawing of stick figure sitting in a grey oval scanner, white background, thick black lines",
+            "  1|||hard|||false|||none|||Man walks into hospital brain scanner|||MS Paint drawing of stick figure sitting in a grey oval scanner room with a wall, floor line, machine cables, and simple hospital background, thick black lines",
             "- scene_change: use the word hard or soft (not the label 'scene_change')",
             "- continue_from_previous: use the word true or false (not the label 'continue_from_previous')",
             "- reference_mode: use the word none, soft, or strong (not the label 'reference_mode')",
             "- Do not output a header row. Do not use field names as values.",
             "- Do not include the delimiter sequence ||| inside summary or prompt",
             "- Do not include any extra commentary before or after the lines",
+            "Transcript:",
+            transcript_block,
+        ]
+    )
+
+
+def _build_background_prompt(segments: list[dict[str, Any]]) -> str:
+    transcript_lines = []
+    for row in segments:
+        transcript_lines.append(
+            f"Segment {int(row.get('index', len(transcript_lines) + 1))} "
+            f"[{float(row['start']):.2f}-{float(row['end']):.2f}] "
+            f"{_clean_text(row.get('text', ''))}"
+        )
+    transcript_block = "\n".join(transcript_lines)
+    return "\n".join(
+        [
+            "You are designing one consistent visual world for a YouTube story.",
+            "Read the full transcript and decide the clearest recurring setting or place language that should unify the scene images.",
+            "The style is extremely simple beginner MS Paint art, not polished illustration.",
+            "The background must help viewers understand the story, but it should still be simple, sparse, and easy to redraw across many scenes.",
+            "Return exactly one JSON object and nothing else.",
+            "Use this schema exactly:",
+            '{'
+            '"setting_name":"short place label",'
+            '"setting_summary":"1-2 sentences describing the recurring world and why it fits the story",'
+            '"background_prompt":"A single detailed image prompt for generating one reusable background reference image in simple MS Paint style",'
+            '"recurring_elements":["item 1","item 2","item 3"],'
+            '"palette":["color 1","color 2","color 3"]'
+            '}',
+            "Rules for background_prompt:",
+            "- include a clear location with walls, ground, horizon, furniture, props, or landmarks when appropriate",
+            "- keep it simple, flat, and hand-drawn",
+            "- no white seamless studio background",
+            "- no realistic shading or cinematic rendering",
+            "- allow empty space for characters to be placed later",
+            "- 16:9 horizontal frame",
             "Transcript:",
             transcript_block,
         ]
@@ -290,6 +349,114 @@ def _plan_with_minimax_batch(
 
 
 _MINIMAX_BATCH_RETRIES = 3
+
+
+def _normalize_background_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    recurring_elements = plan.get("recurring_elements", [])
+    if not isinstance(recurring_elements, list):
+        recurring_elements = []
+    palette = plan.get("palette", [])
+    if not isinstance(palette, list):
+        palette = []
+    return {
+        "setting_name": _clean_text(plan.get("setting_name", "story world")),
+        "setting_summary": _clean_text(plan.get("setting_summary", "")),
+        "background_prompt": _clean_text(plan.get("background_prompt", "")),
+        "recurring_elements": [_clean_text(item) for item in recurring_elements if _clean_text(str(item))],
+        "palette": [_clean_text(item) for item in palette if _clean_text(str(item))],
+    }
+
+
+def _heuristic_background_plan(segments: list[dict[str, Any]]) -> dict[str, Any]:
+    joined = " ".join(_clean_text(row.get("text", "")) for row in segments).lower()
+    if any(term in joined for term in ("mountain", "summit", "peak", "climb", "cloud")):
+        setting_name = "mountain summit world"
+        setting_summary = (
+            "A simple hand-drawn mountain world with cliffs, clouds, warning signs, and a steep path. "
+            "It matches a story about struggle, danger, and losing ground."
+        )
+        recurring = ["steep mountain path", "clouds", "warning sign", "cliff edge"]
+        palette = ["light blue", "gray", "green", "red"]
+    elif any(term in joined for term in ("city", "street", "building", "office", "computer")):
+        setting_name = "simple city story world"
+        setting_summary = (
+            "A flat hand-drawn city backdrop with a few buildings, windows, roads, and simple office or home props. "
+            "It gives the story a recognizable real-world place without adding detail."
+        )
+        recurring = ["boxy buildings", "road", "desk or computer", "simple sky"]
+        palette = ["light blue", "gray", "brown", "green"]
+    else:
+        setting_name = "simple story backdrop"
+        setting_summary = (
+            "A flexible hand-drawn setting with a floor line, horizon, a few props, and enough empty space for characters. "
+            "It keeps the world readable while staying very simple."
+        )
+        recurring = ["floor line", "horizon line", "simple prop", "open space"]
+        palette = ["light blue", "green", "gray", "brown"]
+
+    background_prompt = (
+        f"MS Paint beginner drawing of a {setting_name}, with {', '.join(recurring)}, "
+        "thick uneven black outlines, wobbly lines, flat colors, simple readable background shapes, "
+        "lots of open space for characters, 16:9 horizontal frame, intentionally amateur."
+    )
+    return {
+        "setting_name": setting_name,
+        "setting_summary": setting_summary,
+        "background_prompt": background_prompt,
+        "recurring_elements": recurring,
+        "palette": palette,
+    }
+
+
+def plan_background(segments: list[dict[str, Any]]) -> dict[str, Any]:
+    if not config.MINIMAX_API_KEY:
+        return _heuristic_background_plan(segments)
+
+    body = {
+        "model": config.MINIMAX_SCENE_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a visual world planner for an automated video pipeline. "
+                    "Return exactly one JSON object with no markdown fences or extra text."
+                ),
+            },
+            {
+                "role": "user",
+                "content": _build_background_prompt(segments),
+            },
+        ],
+        "max_completion_tokens": 4000,
+        "temperature": 0.2,
+    }
+    request = urllib.request.Request(
+        f"{config.MINIMAX_API_BASE.rstrip('/')}/chat/completions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {config.MINIMAX_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        print(f"[image] background planner unavailable, using heuristic fallback: {exc.code} {detail}")
+        return _heuristic_background_plan(segments)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[image] background planner unavailable, using heuristic fallback: {exc}")
+        return _heuristic_background_plan(segments)
+
+    _append_raw_minimax_payload(payload, "background plan")
+    text = _extract_response_text(payload)
+    try:
+        return _normalize_background_plan(_extract_json_object(text))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[image] background planner returned invalid JSON, using heuristic fallback: {exc}")
+        return _heuristic_background_plan(segments)
 
 
 def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -470,9 +637,9 @@ def _plan_with_heuristics(segments: list[dict[str, Any]]) -> list[dict[str, Any]
                 "continue_from_previous": continue_from_previous,
                 "reference_mode": reference_mode,
                 "prompt": (
-                    f"Create a cinematic still image for this narration beat: {transcript}. "
-                    "Choose a clear focal subject, a believable environment, dynamic framing, "
-                    "story-driven lighting, and a mood that matches the line."
+                    f"Create an extremely simple MS Paint-style still image for this narration beat: {transcript}. "
+                    "Choose a clear focal subject, a simple readable background, a few useful props, "
+                    "and a mood that matches the line."
                 ),
             }
         )
@@ -490,8 +657,11 @@ def plan_scenes(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return _normalize_scenes(scenes)
 
 
-def _normalize_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _normalize_scenes(scenes: list[dict[str, Any]], background_plan: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     normalized = []
+    background_plan = background_plan or {}
+    recurring_elements = background_plan.get("recurring_elements", [])
+    palette = background_plan.get("palette", [])
     for index, scene in enumerate(scenes, 1):
         start = float(scene["start"])
         end = max(start, float(scene["end"]))
@@ -523,16 +693,53 @@ def _normalize_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "reference_mode": reference_mode,
                 "reference_strength": reference_strength,
                 "prompt": _clean_text(scene.get("prompt", transcript)),
+                "setting_name": _clean_text(scene.get("setting_name", background_plan.get("setting_name", ""))),
+                "setting_summary": _clean_text(
+                    scene.get("setting_summary", background_plan.get("setting_summary", ""))
+                ),
+                "background_elements": list(
+                    scene.get("background_elements", recurring_elements)
+                    if isinstance(scene.get("background_elements", recurring_elements), list)
+                    else recurring_elements
+                ),
+                "background_palette": list(
+                    scene.get("background_palette", palette)
+                    if isinstance(scene.get("background_palette", palette), list)
+                    else palette
+                ),
                 "image_name": image_name,
             }
         )
     return normalized
 
 
-def _compose_prompt(scene: dict[str, Any]) -> str:
+def _compose_prompt(scene: dict[str, Any], background_plan: dict[str, Any] | None = None) -> str:
+    background_plan = background_plan or {}
+    setting_name = _clean_text(scene.get("setting_name", background_plan.get("setting_name", "")))
+    setting_summary = _clean_text(scene.get("setting_summary", background_plan.get("setting_summary", "")))
+    recurring_elements = scene.get("background_elements", background_plan.get("recurring_elements", []))
+    palette = scene.get("background_palette", background_plan.get("palette", []))
     scene_bits = [
         config.IMAGE_PROMPT_STYLE,
         scene["prompt"],
+        (
+            f"The scene takes place in the recurring setting '{setting_name}'. {setting_summary}"
+            if setting_name or setting_summary
+            else ""
+        ),
+        (
+            "Keep a simple visible background with these recurring elements: "
+            + ", ".join(_clean_text(str(item)) for item in recurring_elements if _clean_text(str(item)))
+            if recurring_elements
+            else "Keep a simple visible background that clearly establishes the place."
+        ),
+        (
+            "Use this simple palette where helpful: "
+            + ", ".join(_clean_text(str(item)) for item in palette if _clean_text(str(item)))
+            if palette
+            else ""
+        ),
+        "Do not use a blank white background. Include walls, ground, horizon, props, or landmarks as needed.",
     ]
     if scene["continue_from_previous"]:
         scene_bits.append(
@@ -555,6 +762,7 @@ def write_scene_plan(path: str, scenes: list[dict[str, Any]]) -> None:
             [
                 f"Scene {scene['scene_number']} [{scene['start']:.2f}-{scene['end']:.2f}]",
                 f"Change: {scene['scene_change']}, reference: {scene['reference_mode']}",
+                f"Setting: {scene.get('setting_name', '')}",
                 f"Transcript: {scene['transcript']}",
                 f"Prompt: {scene['prompt']}",
                 "",
@@ -564,13 +772,33 @@ def write_scene_plan(path: str, scenes: list[dict[str, Any]]) -> None:
         handle.write("\n".join(lines).strip() + "\n")
 
 
+def write_background_plan(path: str, background_plan: dict[str, Any]) -> None:
+    config.ensure_dirs()
+    config.write_json(path, background_plan)
+
+
+def load_background_plan(path: str | None = None) -> dict[str, Any]:
+    background_plan_path = path or config.BACKGROUND_PLAN_JSON
+    with open(background_plan_path, "r", encoding="utf-8-sig") as handle:
+        plan = json.load(handle)
+    if not isinstance(plan, dict):
+        raise ValueError(f"Background plan JSON must contain an object: {background_plan_path}")
+    return _normalize_background_plan(plan)
+
+
 def load_scene_plan(path: str | None = None) -> list[dict[str, Any]]:
     scene_plan_path = path or config.SCENE_PLAN_JSON
     with open(scene_plan_path, "r", encoding="utf-8-sig") as handle:
         scenes = json.load(handle)
     if not isinstance(scenes, list):
         raise ValueError(f"Scene plan JSON must contain a list of scenes: {scene_plan_path}")
-    return _normalize_scenes(scenes)
+    background_plan = None
+    if os.path.exists(config.BACKGROUND_PLAN_JSON):
+        try:
+            background_plan = load_background_plan()
+        except Exception:  # noqa: BLE001
+            background_plan = None
+    return _normalize_scenes(scenes, background_plan=background_plan)
 
 
 def _find_previous_generated_image(scene_number: int, scenes: list[dict[str, Any]], image_dir: str) -> str | None:
@@ -587,6 +815,8 @@ async def _generate_one_image(
     runware: Runware,
     scene: dict[str, Any],
     image_dir: str,
+    background_plan: dict[str, Any] | None = None,
+    background_image_path: str | None = None,
     previous_image_path: str | None = None,
 ) -> str:
     os.makedirs(image_dir, exist_ok=True)
@@ -596,15 +826,20 @@ async def _generate_one_image(
         return output_path
 
     print(f"[image] scene {scene['scene_number']}: generating (mode={scene['reference_mode']})...")
-    inputs = None
+    reference_images: list[str] = []
+    if background_image_path and os.path.exists(background_image_path):
+        with open(background_image_path, "rb") as _fh:
+            _b64 = base64.b64encode(_fh.read()).decode("utf-8")
+        reference_images.append(f"data:image/png;base64,{_b64}")
     if scene["continue_from_previous"] and previous_image_path and os.path.exists(previous_image_path):
         with open(previous_image_path, "rb") as _fh:
             _b64 = base64.b64encode(_fh.read()).decode("utf-8")
-        inputs = IInputs(referenceImages=[f"data:image/png;base64,{_b64}"])
+        reference_images.append(f"data:image/png;base64,{_b64}")
+    inputs = IInputs(referenceImages=reference_images) if reference_images else None
 
     request = IImageInference(
         model=config.IMAGE_MODEL,
-        positivePrompt=_compose_prompt(scene),
+        positivePrompt=_compose_prompt(scene, background_plan=background_plan),
         width=config.IMAGE_WIDTH,
         height=config.IMAGE_HEIGHT,
         outputFormat="PNG",
@@ -638,9 +873,68 @@ async def _generate_one_image(
     return output_path
 
 
+async def _generate_background_image(
+    runware: Runware,
+    background_plan: dict[str, Any],
+    output_path: str | None = None,
+) -> str | None:
+    if not background_plan.get("background_prompt"):
+        return None
+
+    background_path = output_path or config.BACKGROUND_IMAGE
+    os.makedirs(os.path.dirname(background_path), exist_ok=True)
+    if os.path.exists(background_path):
+        print(f"[image] background reference already exists, skipping: {background_path}")
+        return background_path
+
+    prompt = " ".join(
+        bit.strip()
+        for bit in (
+            config.IMAGE_PROMPT_STYLE,
+            background_plan.get("background_prompt", ""),
+            "Create only the reusable background environment with no dominant foreground character.",
+            "Keep the place simple, readable, flat, and consistent with later scene images.",
+            "Do not use a blank white background.",
+        )
+        if bit and str(bit).strip()
+    )
+    print("[image] generating shared background reference...")
+    request = IImageInference(
+        model=config.IMAGE_MODEL,
+        positivePrompt=prompt,
+        width=config.IMAGE_WIDTH,
+        height=config.IMAGE_HEIGHT,
+        outputFormat="PNG",
+        outputType="URL",
+        numberResults=1,
+        includeCost=True,
+        providerSettings=IOpenAIProviderSettings(
+            quality=config.IMAGE_PROVIDER_QUALITY,
+        ),
+        taskUUID=str(uuid4()),
+    )
+
+    result = await runware.imageInference(request)
+    if not result:
+        raise RuntimeError("No image returned for background reference")
+    image = result[0]
+    image_url = getattr(image, "imageURL", None)
+    if not image_url:
+        raise RuntimeError("Image URL missing for background reference")
+
+    with urllib.request.urlopen(image_url, timeout=120) as response:
+        data = response.read()
+    with open(background_path, "wb") as handle:
+        handle.write(data)
+    print(f"[image] wrote background reference to {background_path}")
+    return background_path
+
+
 async def generate_images(
     scenes: list[dict[str, Any]],
     image_dir: str | None = None,
+    background_plan: dict[str, Any] | None = None,
+    background_image_path: str | None = None,
     scene_numbers: list[int] | None = None,
     random_test: bool = False,
 ) -> list[str]:
@@ -660,6 +954,11 @@ async def generate_images(
 
     runware = Runware(api_key=config.RUNWARE_API_KEY)
     await runware.connect()
+    background_reference = await _generate_background_image(
+        runware,
+        background_plan or {},
+        output_path=background_image_path or config.BACKGROUND_IMAGE,
+    )
 
     # Build a sorted list of all scene numbers for prerequisite lookups
     all_nums_sorted = sorted(int(s["scene_number"]) for s in scenes)
@@ -696,7 +995,14 @@ async def generate_images(
             prev_path = _find_previous_generated_image(scene_num, scenes, target_dir)
 
         async with semaphore:
-            result = await _generate_one_image(runware, scene, target_dir, previous_image_path=prev_path)
+            result = await _generate_one_image(
+                runware,
+                scene,
+                target_dir,
+                background_plan=background_plan,
+                background_image_path=background_reference,
+                previous_image_path=prev_path,
+            )
 
         done[scene_num].set()
         return result
@@ -721,7 +1027,10 @@ async def generate_images(
 def create_scene_plan(transcript_path: str | None = None) -> list[dict[str, Any]]:
     transcript_file = transcript_path or config.TRANSCRIPT_JSON
     segments = _load_segments(transcript_file)
-    scenes = plan_scenes(segments)
+    background_plan = plan_background(segments)
+    write_background_plan(config.BACKGROUND_PLAN_JSON, background_plan)
+    print(f"[image] wrote background plan: {config.BACKGROUND_PLAN_JSON}")
+    scenes = _normalize_scenes(plan_scenes(segments), background_plan=background_plan)
     if len(scenes) != len(segments):
         raise ValueError(
             f"Scene planner returned {len(scenes)} scenes for {len(segments)} transcript segments."
@@ -740,21 +1049,29 @@ def run_image_pipeline(
     scene_plan_path: str | None = None,
 ) -> dict[str, Any]:
     if generate_only:
+        background_plan = None
+        if os.path.exists(config.BACKGROUND_PLAN_JSON):
+            background_plan = load_background_plan()
         scenes = load_scene_plan(path=scene_plan_path)
         print(f"[image] loaded existing scene plan: {scene_plan_path or config.SCENE_PLAN_JSON}")
     else:
+        background_plan = load_background_plan() if os.path.exists(config.BACKGROUND_PLAN_JSON) else None
         scenes = create_scene_plan(transcript_path=transcript_path)
+        if os.path.exists(config.BACKGROUND_PLAN_JSON):
+            background_plan = load_background_plan()
     image_paths: list[str] = []
     if not plan_only:
         image_paths = asyncio.run(
             generate_images(
                 scenes,
                 image_dir=image_dir,
+                background_plan=background_plan,
                 random_test=test,
             )
         )
     return {
         "scene_plan_path": scene_plan_path or config.SCENE_PLAN_JSON,
+        "background_plan_path": config.BACKGROUND_PLAN_JSON,
         "scene_count": len(scenes),
         "image_dir": image_dir or config.IMAGE_DIR,
         "images": image_paths,
