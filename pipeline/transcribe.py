@@ -1,11 +1,48 @@
 """faster-whisper transcription helpers with finer scene-oriented splitting."""
 
+import os
+import sys
+
 from . import config
 
 _model = None
 
 
+def _register_cuda_dll_dirs():
+    """Make pip-installed NVIDIA CUDA DLLs (cublas, cudnn) loadable by ctranslate2.
+
+    The nvidia-cublas-cu12 / nvidia-cudnn-cu12 pip packages drop their DLLs into
+    site-packages, but Windows only searches PATH/System32 for LoadLibrary calls
+    made deep inside ctranslate2's CUDA backend. Without this, model construction
+    succeeds but the first .transcribe() call fails with
+    "Library cublas64_12.dll is not found or cannot be loaded".
+    """
+    if sys.platform != "win32":
+        return
+    bin_dirs = []
+    for package in ("cublas", "cudnn", "cuda_nvrtc"):
+        try:
+            module = __import__(f"nvidia.{package}", fromlist=["bin"])
+        except ImportError:
+            continue
+        if module.__file__:
+            package_dir = os.path.dirname(module.__file__)
+        elif module.__path__:
+            package_dir = list(module.__path__)[0]
+        else:
+            continue
+        bin_dir = os.path.join(package_dir, "bin")
+        if os.path.isdir(bin_dir):
+            bin_dirs.append(bin_dir)
+            os.add_dll_directory(bin_dir)
+
+    if bin_dirs:
+        os.environ["PATH"] = os.pathsep.join(bin_dirs) + os.pathsep + os.environ.get("PATH", "")
+
+
 def _load_model(device, compute_type):
+    if device == "cuda":
+        _register_cuda_dll_dirs()
     from faster_whisper import WhisperModel
     return WhisperModel(config.WHISPER_MODEL, device=device, compute_type=compute_type)
 
