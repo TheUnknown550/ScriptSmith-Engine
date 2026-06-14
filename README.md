@@ -1,13 +1,13 @@
-# Auto Editor
+# ScriptSmith-Engine
 
-[![CI](https://github.com/TheUnknown550/Auto_Editor/actions/workflows/ci.yml/badge.svg)](https://github.com/TheUnknown550/Auto_Editor/actions/workflows/ci.yml)
+[![CI](https://github.com/TheUnknown550/ScriptSmith-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/TheUnknown550/ScriptSmith-Engine/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Auto Editor pipeline](assets/pipeline-diagram.svg)
+![ScriptSmith-Engine pipeline](assets/pipeline-diagram.svg)
 
 ## Introduction
 
-Auto Editor turns a plain text script into a fully edited, narrated YouTube video — automatically.
+ScriptSmith-Engine turns a plain text script into a fully edited, narrated YouTube video — automatically.
 
 Write your script as a `.txt` file, then run a small pipeline of scripts that:
 
@@ -28,8 +28,8 @@ run_editor.py           →  final video
 ## Quick Start
 
 ```powershell
-git clone https://github.com/TheUnknown550/Auto_Editor.git
-cd Auto_Editor
+git clone https://github.com/TheUnknown550/ScriptSmith-Engine.git
+cd ScriptSmith-Engine
 
 python -m venv .venv
 .\.venv\Scripts\activate

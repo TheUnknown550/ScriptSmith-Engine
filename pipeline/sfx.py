@@ -29,14 +29,14 @@ def _search_freesound(query: str, max_duration: float) -> list[dict[str, Any]]:
         "page_size": 5,
     }
     url = _FREESOUND_SEARCH_URL + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": "MythozAutoEditor/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ScriptSmithEngine/1.0"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read().decode("utf-8")).get("results", [])
 
 
 def _download_preview(preview_url: str, dest_path: str) -> None:
     os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)
-    req = urllib.request.Request(preview_url, headers={"User-Agent": "MythozAutoEditor/1.0"})
+    req = urllib.request.Request(preview_url, headers={"User-Agent": "ScriptSmithEngine/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = resp.read()
     with open(dest_path, "wb") as handle:
