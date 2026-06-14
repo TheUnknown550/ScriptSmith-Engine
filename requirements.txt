@@ -1,7 +1,7 @@
-google-genai
-python-dotenv
-soundfile
-numpy
-faster-whisper
-ffmpeg-python
-runware
+google-genai>=2.8.0
+python-dotenv>=1.2.2
+soundfile>=0.13.1
+numpy>=2.4.6
+faster-whisper>=1.2.1
+ffmpeg-python>=0.2.0
+runware>=0.5.17

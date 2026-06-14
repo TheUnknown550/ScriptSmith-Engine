@@ -1,0 +1,72 @@
+[
+  {
+    "scene_number": 1,
+    "start": 0.0,
+    "end": 3.04,
+    "duration": 3.04,
+    "transcript": "This is Tony. And Tony is having the best five seconds of his life.",
+    "summary": "Tony stands confidently outside, grinning, completely unaware of what's about to happen.",
+    "scene_change": "hard",
+    "continue_from_previous": false,
+    "reference_mode": "none",
+    "reference_strength": 0.0,
+    "prompt": "A confident young man named Tony standing outside a restricted government research building at dusk, grinning, holding a skateboard, unaware of impending disaster.",
+    "image_name": "00-00-000.png"
+  },
+  {
+    "scene_number": 2,
+    "start": 3.04,
+    "end": 8.24,
+    "duration": 5.2,
+    "transcript": "He is behind a restricted government research building. There is a giant sign that says: AUTHORIZED PERSONNEL ONLY.",
+    "summary": "A large warning sign reading AUTHORIZED PERSONNEL ONLY looms over the fenced research facility.",
+    "scene_change": "soft",
+    "continue_from_previous": true,
+    "reference_mode": "soft",
+    "reference_strength": 0.35,
+    "prompt": "A massive warning sign reading AUTHORIZED PERSONNEL ONLY mounted on a chain-link fence around a government research building, dramatic evening lighting.",
+    "image_name": "00-03-040.png"
+  },
+  {
+    "scene_number": 3,
+    "start": 8.24,
+    "end": 13.86,
+    "duration": 5.62,
+    "transcript": "Tony sees the sign. Tony sees his skateboard. And Tony makes the kind of decision that changes history.",
+    "summary": "Tony glances between the warning sign and his skateboard, deciding to attempt a trick anyway.",
+    "scene_change": "hard",
+    "continue_from_previous": false,
+    "reference_mode": "none",
+    "reference_strength": 0.0,
+    "prompt": "Close-up of Tony looking back and forth between a warning sign and his skateboard, a mischievous decision forming on his face, cinematic lighting.",
+    "image_name": "00-08-240.png"
+  },
+  {
+    "scene_number": 4,
+    "start": 13.86,
+    "end": 23.48,
+    "duration": 9.62,
+    "transcript": "He pushes forward. He jumps. The skateboard spins under his feet. For one beautiful moment, Tony looks like a professional.",
+    "summary": "Tony launches into a skateboard trick, briefly looking like a professional skater mid-air.",
+    "scene_change": "hard",
+    "continue_from_previous": false,
+    "reference_mode": "none",
+    "reference_strength": 0.0,
+    "prompt": "Dynamic action shot of Tony mid-air on a skateboard performing a trick in front of a research facility, motion blur, dramatic angle.",
+    "image_name": "00-13-860.png"
+  },
+  {
+    "scene_number": 5,
+    "start": 23.48,
+    "end": 34.46,
+    "duration": 10.98,
+    "transcript": "Then his foot slips. The board shoots out from under him. It flies over a metal fence. Bounces off a warning sign. Smashes into a glowing electrical unit. And then... BZZZZZT.",
+    "summary": "The runaway skateboard smashes into a glowing electrical control unit, triggering a massive electrical surge.",
+    "scene_change": "hard",
+    "continue_from_previous": false,
+    "reference_mode": "none",
+    "reference_strength": 0.0,
+    "prompt": "A skateboard flying through the air and crashing into a glowing electrical control unit, sparks and bright blue electrical surge, dramatic action moment.",
+    "image_name": "00-23-480.png"
+  }
+]

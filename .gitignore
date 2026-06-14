@@ -9,7 +9,7 @@ __pycache__/
 .env
 
 # Project input/output
-script.txt
+/script.txt
 output/
 
 # OS / editor

@@ -1,5 +1,8 @@
 # Auto Editor
 
+[![CI](https://github.com/TheUnknown550/Auto_Editor/actions/workflows/ci.yml/badge.svg)](https://github.com/TheUnknown550/Auto_Editor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ![Auto Editor pipeline](assets/pipeline-diagram.svg)
 
 ## Introduction
@@ -21,6 +24,26 @@ run_image_generate.py   →  scene plan + AI images
 run_sfx.py              →  sound effects mixed into audio
 run_editor.py           →  final video
 ```
+
+## Quick Start
+
+```powershell
+git clone https://github.com/TheUnknown550/Auto_Editor.git
+cd Auto_Editor
+
+python -m venv .venv
+.\.venv\Scripts\activate
+
+pip install -r requirements.txt
+cp .env.example .env
+
+python run_pipeline.py
+python run_image_generate.py
+python run_sfx.py
+python run_editor.py
+```
+
+> Fill in your API keys in `.env` before running the pipeline — see [APIs Required](#apis-required) below. Each script can also be run on its own; see the per-part sections further down for options.
 
 ## APIs Required
 
@@ -207,6 +230,18 @@ python run_editor.py --images "D:\path\to\img" --audio output\audio\full_with_sf
 - `output/video/final_video.mp4`
 
 The editor auto-detects whether your images have timestamp filenames (e.g. `01-40-700.png`) and uses them as timeline anchors. If they don't, it falls back to pairing images to transcript segments in order. GPU encoding (`h264_nvenc`) is used automatically if available.
+
+---
+
+## Example
+
+The [`examples/`](examples) folder contains a real sample run end-to-end:
+
+- [`examples/script.txt`](examples/script.txt) — a complete sample input script
+- [`examples/scene_plan.json`](examples/scene_plan.json) — the AI-generated scene plan for the opening scenes (output of Part 2)
+- [`examples/final_video_preview.mp4`](examples/final_video_preview.mp4) — a short preview clip of the final rendered video (output of Part 4)
+
+Use `examples/script.txt` as `script.txt` to try the full pipeline yourself.
 
 ---
 

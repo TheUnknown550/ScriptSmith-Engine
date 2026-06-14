@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile check
+        run: python -m compileall -q pipeline run_pipeline.py run_image_generate.py run_image_generator.py run_sfx.py run_editor.py run_transcript.py
+
+      - name: Import check
+        run: python -c "from pipeline import config, tts, sfx, generate_image, transcribe, editor; print('pipeline imports OK')"
