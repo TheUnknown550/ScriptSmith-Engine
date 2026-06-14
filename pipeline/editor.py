@@ -176,6 +176,10 @@ def _xfade_duration(previous_item, next_item):
     return min(config.FADE_DURATION, max(0.0, max_allowed - 0.01))
 
 
+def _final_video_duration(timeline):
+    return max(0.0, sum(item["duration"] for item in timeline))
+
+
 def stitch_images_to_video(
     image_dir,
     audio_path,
@@ -228,6 +232,16 @@ def stitch_images_to_video(
         )
         current_label = output_label
         current_duration += timeline[index]["duration"]
+
+    edge_fade = min(config.FADE_DURATION, max(0.0, _final_video_duration(timeline) / 2.0 - 0.01))
+    if edge_fade > 0:
+        faded_label = "vfinal"
+        fade_out_start = max(0.0, _final_video_duration(timeline) - edge_fade)
+        filter_parts.append(
+            f"[{current_label}]fade=t=in:st=0:d={edge_fade:.3f},"
+            f"fade=t=out:st={fade_out_start:.3f}:d={edge_fade:.3f}[{faded_label}]"
+        )
+        current_label = faded_label
 
     filter_script = os.path.join(config.TEMP_DIR, "xfade_filter.txt")
     with open(filter_script, "w", encoding="utf-8") as handle:
