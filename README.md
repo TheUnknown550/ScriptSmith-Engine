@@ -1,6 +1,17 @@
 # Auto Editor
 
-A four-step pipeline that turns a `script.txt` into a fully edited YouTube video with narration, AI-planned scene images, and sound effects.
+## Introduction
+
+Auto Editor turns a plain text script into a fully edited, narrated YouTube video — automatically.
+
+Write your script as a `.txt` file, then run a small pipeline of scripts that:
+
+1. **Narrates it** with Gemini TTS and transcribes the result into timestamped segments.
+2. **Plans and generates scene images** with AI (MiniMax for scene planning, Runware/GPT Image for the artwork), synced to those timestamps.
+3. **Adds sound effects**, automatically picked and placed by AI and sourced from Freesound.
+4. **Assembles everything** into a final video, syncing images and audio on a timeline.
+
+The goal is to go from "I have a script" to "I have a video" with minimal manual editing — each step can also be run independently, so you can swap in your own audio, images, or SFX at any stage.
 
 ```
 run_pipeline.py         →  narration audio + timestamps
