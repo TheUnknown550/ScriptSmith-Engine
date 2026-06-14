@@ -85,13 +85,19 @@ SCENE_PLAN_TXT = os.path.join(IMAGE_PLAN_DIR, "scene_prompts.txt")
 MINIMAX_RAW_RESPONSE = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_response.txt")
 MINIMAX_RAW_PAYLOAD = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_payload.json")
 IMAGE_PROMPT_STYLE = (
-    "Cinematic digital illustration with strong composition, coherent anatomy, "
-    "high detail, dramatic but natural lighting, storybook realism, crisp focus, "
-    "clean silhouettes, and a consistent visual identity across the full video."
+    "Flat-color 2D cartoon illustration in the style of popular animated YouTube "
+    "explainer videos: simple stick-figure characters with round heads, thin "
+    "black line limbs, and expressive faces, set against a fully rendered, "
+    "detailed background appropriate to the scene's location, era, and time of "
+    "day. Bold thick black outlines, flat colors with simple shading, a mood "
+    "and color palette that match the emotion of the line, strong 16:9 "
+    "cinematic framing, and a consistent visual identity across the full video."
 )
 IMAGE_NEGATIVE_PROMPT = (
-    "blurry, low detail, deformed anatomy, duplicated subjects, extra limbs, "
-    "text, watermark, logo, flat lighting, muddy colors, collage layout, split screen"
+    "photorealistic, 3D render, anime, Disney style, empty background, blank "
+    "white background, no background, blurry, low detail, deformed anatomy, "
+    "duplicated subjects, extra limbs, text, watermark, logo, muddy colors, "
+    "collage layout, split screen"
 )
 IMAGE_MODEL = os.environ.get("RUNWARE_IMAGE_MODEL", "openai:gpt-image@2")
 IMAGE_PROVIDER_QUALITY = os.environ.get("RUNWARE_IMAGE_QUALITY", "low")
