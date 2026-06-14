@@ -66,10 +66,19 @@ def _split_segment(segment):
     current_start = seg_start
 
     for word in words:
+        word_start = _word_start(word, seg_start)
+        word_end = _word_end(word, seg_end)
+
+        if current and (word_end - current_start) > max_seconds:
+            chunk = _chunk_from_words(current, current_start, _word_end(current[-1], seg_end))
+            if chunk:
+                chunks.append(chunk)
+            current = []
+
         if not current:
-            current_start = _word_start(word, seg_start)
+            current_start = word_start
         current.append(word)
-        current_end = _word_end(word, seg_end)
+        current_end = word_end
         duration = current_end - current_start
         token = _word_text(word).strip()
         hard_boundary = any(mark in token for mark in ".!?")
@@ -99,6 +108,7 @@ def _split_segment(segment):
 
 def _merge_tiny_chunks(chunks):
     min_seconds = config.TRANSCRIPT_MIN_SEGMENT_SECONDS
+    max_seconds = config.TRANSCRIPT_MAX_SEGMENT_SECONDS
     output = []
     i = 0
     while i < len(chunks):
@@ -106,15 +116,17 @@ def _merge_tiny_chunks(chunks):
         duration = float(current["end"]) - float(current["start"])
         if duration < min_seconds and i + 1 < len(chunks):
             nxt = chunks[i + 1]
-            output.append(
-                {
-                    "start": current["start"],
-                    "end": nxt["end"],
-                    "text": f"{current['text']} {nxt['text']}".strip(),
-                }
-            )
-            i += 2
-            continue
+            merged_duration = float(nxt["end"]) - float(current["start"])
+            if merged_duration <= max_seconds:
+                output.append(
+                    {
+                        "start": current["start"],
+                        "end": nxt["end"],
+                        "text": f"{current['text']} {nxt['text']}".strip(),
+                    }
+                )
+                i += 2
+                continue
         output.append(current)
         i += 1
     return output
