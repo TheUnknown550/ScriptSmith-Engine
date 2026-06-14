@@ -36,7 +36,7 @@ FREESOUND_API_KEY = os.environ.get("FREESOUND_API_KEY", "")
 FREESOUND_CLIENT_ID = os.environ.get("FREESOUND_CLIENT_ID", "")
 FREESOUND_CLIENT_SECRET = os.environ.get("FREESOUND_CLIENT_SECRET", "")
 GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
-GEMINI_TTS_VOICE = "Charon"
+GEMINI_TTS_VOICE = "Orus"
 GEMINI_TTS_STYLE = (
     "You are a confident, engaging YouTube narrator for a documentary-style video. "
     "Deliver the narration with consistent energy — warm, authoritative, and clear throughout. "
