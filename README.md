@@ -16,7 +16,11 @@ run_editor.py           →  final video
 pip install -r requirements.txt
 ```
 
-Set your API keys in `.env`:
+Copy `.env.example` to `.env` and fill in your API keys:
+
+```powershell
+cp .env.example .env
+```
 
 ```
 GOOGLE_API_KEY=        # Gemini TTS
@@ -175,3 +179,9 @@ python run_editor.py --images "D:\path\to\img" --audio output\audio\full_with_sf
 - `output/video/final_video.mp4`
 
 The editor auto-detects whether your images have timestamp filenames (e.g. `01-40-700.png`) and uses them as timeline anchors. If they don't, it falls back to pairing images to transcript segments in order. GPU encoding (`h264_nvenc`) is used automatically if available.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

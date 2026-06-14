@@ -1,6 +1,19 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
-output/
+*.egg-info/
+.pytest_cache/
+
+# Environment / secrets
 .env
+
+# Project input/output
 script.txt
+output/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

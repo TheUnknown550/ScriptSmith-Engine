@@ -23,7 +23,6 @@ IMAGE_DIR = os.path.join(OUTPUT_DIR, "images")
 IMAGE_PLAN_DIR = os.path.join(OUTPUT_DIR, "image_plan")
 SFX_DIR = os.path.join(OUTPUT_DIR, "sfx")
 SFX_PLAN_DIR = os.path.join(OUTPUT_DIR, "sfx_plan")
-DEFAULT_IMAGE_DIR = r"D:\mattc\Documents\Creative\Mythoz\vdos\What If The Moon Disappeared Tomorrow\img"
 
 TTS_SAMPLE_RATE = 24000
 WORDS_PER_SECOND = 2.5
