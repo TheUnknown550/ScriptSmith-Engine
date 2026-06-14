@@ -1,5 +1,7 @@
 # Auto Editor
 
+![Auto Editor pipeline](assets/pipeline-diagram.svg)
+
 ## Introduction
 
 Auto Editor turns a plain text script into a fully edited, narrated YouTube video — automatically.
@@ -19,6 +21,21 @@ run_image_generate.py   →  scene plan + AI images
 run_sfx.py              →  sound effects mixed into audio
 run_editor.py           →  final video
 ```
+
+## APIs Required
+
+This project relies on a few external services. You'll need an API key for each:
+
+| Service | Used for | Get a key |
+|---|---|---|
+| [Google Gemini](https://ai.google.dev/) | Text-to-speech narration (`GOOGLE_API_KEY`) | [aistudio.google.com](https://aistudio.google.com/) |
+| [MiniMax](https://www.minimax.io/) | Scene planning + sound effect planning (`MINIMAX_API_KEY`) | [minimax.io](https://www.minimax.io/) |
+| [Runware](https://runware.ai/) | AI scene image generation (`RUNWARE_API_KEY`) | [runware.ai](https://runware.ai/) |
+| [Freesound](https://freesound.org/) | Sound effect search and download (`FREESOUND_API_KEY`, `FREESOUND_CLIENT_ID`, `FREESOUND_CLIENT_SECRET`) | [freesound.org/apiv2/apply](https://freesound.org/apiv2/apply/) |
+
+Also required locally:
+- [FFmpeg](https://ffmpeg.org/download.html) — audio/video processing (must be on your `PATH`)
+- A CUDA-capable GPU is recommended for transcription (`faster-whisper`), but not required
 
 ## Setup
 

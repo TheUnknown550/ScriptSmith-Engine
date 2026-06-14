@@ -1,0 +1,91 @@
+<svg viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="card1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="card2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+    <linearGradient id="card3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="card4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="420" fill="url(#bg)" rx="16"/>
+
+  <!-- Title -->
+  <text x="600" y="48" text-anchor="middle" fill="#f8fafc" font-size="28" font-weight="700">script.txt → fully edited video</text>
+  <text x="600" y="76" text-anchor="middle" fill="#94a3b8" font-size="15">An end-to-end AI pipeline for narrated YouTube videos</text>
+
+  <!-- Script input -->
+  <g transform="translate(20,150)">
+    <rect width="120" height="100" rx="14" fill="#334155"/>
+    <text x="60" y="40" text-anchor="middle" font-size="32">📄</text>
+    <text x="60" y="72" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">script.txt</text>
+  </g>
+  <line x1="142" y1="200" x2="178" y2="200" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 1: Narration -->
+  <g transform="translate(180,130)">
+    <rect width="220" height="140" rx="16" fill="url(#card1)"/>
+    <text x="110" y="36" text-anchor="middle" font-size="36">🎙️</text>
+    <text x="110" y="68" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="700">1. Narration</text>
+    <text x="110" y="90" text-anchor="middle" fill="#e0e7ff" font-size="12">Gemini TTS +</text>
+    <text x="110" y="108" text-anchor="middle" fill="#e0e7ff" font-size="12">timestamped transcript</text>
+    <text x="110" y="130" text-anchor="middle" fill="#c7d2fe" font-size="11" font-style="italic">run_pipeline.py</text>
+  </g>
+  <line x1="402" y1="200" x2="438" y2="200" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: Scene images -->
+  <g transform="translate(440,130)">
+    <rect width="220" height="140" rx="16" fill="url(#card2)"/>
+    <text x="110" y="36" text-anchor="middle" font-size="36">🖼️</text>
+    <text x="110" y="68" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="700">2. Scene Images</text>
+    <text x="110" y="90" text-anchor="middle" fill="#fce7f3" font-size="12">MiniMax scene planning +</text>
+    <text x="110" y="108" text-anchor="middle" fill="#fce7f3" font-size="12">Runware AI image generation</text>
+    <text x="110" y="130" text-anchor="middle" fill="#fbcfe8" font-size="11" font-style="italic">run_image_generate.py</text>
+  </g>
+  <line x1="662" y1="200" x2="698" y2="200" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 3: SFX -->
+  <g transform="translate(700,130)">
+    <rect width="220" height="140" rx="16" fill="url(#card3)"/>
+    <text x="110" y="36" text-anchor="middle" font-size="36">🔊</text>
+    <text x="110" y="68" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="700">3. Sound Effects</text>
+    <text x="110" y="90" text-anchor="middle" fill="#fef3c7" font-size="12">AI-picked SFX from Freesound,</text>
+    <text x="110" y="108" text-anchor="middle" fill="#fef3c7" font-size="12">mixed into the narration</text>
+    <text x="110" y="130" text-anchor="middle" fill="#fde68a" font-size="11" font-style="italic">run_sfx.py</text>
+  </g>
+  <line x1="922" y1="200" x2="958" y2="200" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 4: Editor -->
+  <g transform="translate(960,130)">
+    <rect width="220" height="140" rx="16" fill="url(#card4)"/>
+    <text x="110" y="36" text-anchor="middle" font-size="36">🎬</text>
+    <text x="110" y="68" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="700">4. Final Edit</text>
+    <text x="110" y="90" text-anchor="middle" fill="#d1fae5" font-size="12">Images synced to audio,</text>
+    <text x="110" y="108" text-anchor="middle" fill="#d1fae5" font-size="12">rendered to mp4</text>
+    <text x="110" y="130" text-anchor="middle" fill="#a7f3d0" font-size="11" font-style="italic">run_editor.py</text>
+  </g>
+
+  <!-- Output -->
+  <text x="600" y="340" text-anchor="middle" fill="#94a3b8" font-size="14">↓</text>
+  <g transform="translate(500,355)">
+    <rect width="200" height="50" rx="12" fill="#334155"/>
+    <text x="100" y="32" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="700">📹 final_video.mp4</text>
+  </g>
+</svg>
