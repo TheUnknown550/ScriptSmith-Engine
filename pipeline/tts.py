@@ -1,5 +1,6 @@
 """Gemini TTS helpers tuned for steadier long-form narration."""
 
+import math
 import os
 import re
 import time
@@ -166,13 +167,7 @@ def _build_full_script_prompt(text):
 
 
 def _determine_chunk_count(word_count: int) -> int:
-    if word_count <= 400:
-        return 1
-    if word_count <= 800:
-        return 2
-    if word_count <= 1200:
-        return 3
-    return 4
+    return max(1, min(6, math.ceil(word_count / 250)))
 
 
 def _split_into_n_chunks(text: str, n: int) -> list[str]:

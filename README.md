@@ -110,7 +110,7 @@ python run_pipeline.py --skip-tts
 - `output/transcripts/segments.txt`
 - `output/transcripts/segments.srt`
 
-The script is split into 1–4 requests depending on word count (≤400 words = 1 request, 1200+ words = 4 requests). Each chunk is loudness-normalised and crossfaded at the join so the result sounds like one continuous recording.
+The script is split into 1–6 requests depending on word count (roughly 250 words per request, capped at 6 total). Each chunk is loudness-normalised and crossfaded at the join so the result sounds like one continuous recording.
 
 ---
 
