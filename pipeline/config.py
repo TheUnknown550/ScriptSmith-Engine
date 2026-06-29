@@ -84,20 +84,45 @@ SCENE_PLAN_JSON = os.path.join(IMAGE_PLAN_DIR, "scene_plan.json")
 SCENE_PLAN_TXT = os.path.join(IMAGE_PLAN_DIR, "scene_prompts.txt")
 MINIMAX_RAW_RESPONSE = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_response.txt")
 MINIMAX_RAW_PAYLOAD = os.path.join(IMAGE_PLAN_DIR, "minimax_raw_payload.json")
+FAILED_SCENES_LOG = os.path.join(IMAGE_PLAN_DIR, "failed_scenes.txt")
 IMAGE_PROMPT_STYLE = (
-    "Flat-color 2D cartoon illustration in the style of popular animated YouTube "
-    "explainer videos: simple stick-figure characters with round heads, thin "
-    "black line limbs, and expressive faces, set against a fully rendered, "
-    "detailed background appropriate to the scene's location, era, and time of "
-    "day. Bold thick black outlines, flat colors with simple shading, a mood "
-    "and color palette that match the emotion of the line, strong 16:9 "
-    "cinematic framing, and a consistent visual identity across the full video."
+    "Very simple, childlike 2D doodle illustration, like a hand-drawn whiteboard "
+    "explainer video sketch: stick-figure characters with round heads, plain dot "
+    "or oval eyes, simple eyebrows and a simple mouth for emotion, thin black "
+    "line limbs, no detailed clothing. Background is a single flat soft, chill, "
+    "pastel/muted color chosen to gently match the scene's mood and setting "
+    "(e.g. soft pale blue for calm or daytime, soft muted lavender or navy-grey "
+    "for night, soft warm cream for cozy, soft pale grey-green for outdoors, "
+    "soft dusty pink or peach for happy/embarrassed) — plain white is one valid "
+    "option and should be the default only when the line has no specific "
+    "place, time, or mood. Never use harsh, strong, or highly saturated colors; "
+    "every background color stays soft, clean, and low-saturation. Include a "
+    "small handful of simple doodle objects in the background and/or "
+    "foreground that fit the scene (e.g. a tree, a bird, a house, a road, a "
+    "cloud, a lamp) to keep the image engaging, but keep every object just as "
+    "plain and simple as the main character — flat shapes, no gradients, no "
+    "shading, no fine detail. Every character and object must be filled with a "
+    "color that visibly contrasts with the background so nothing blends into "
+    "it (e.g. if the background is soft light blue, draw the stick figure in "
+    "white or another contrasting flat color, never a similar blue). Bold "
+    "uneven black outlines, minimal flat colors, 16:9 framing, "
+    "consistent simple visual identity across the full video. When moving "
+    "between neighboring scenes that share the same mood or location, shift "
+    "the background color smoothly to a nearby soft tone rather than jumping "
+    "to an unrelated color, so the video's palette feels like a gentle, "
+    "continuous flow rather than abrupt jumps. Tone should be "
+    "funny and entertaining: exaggerated goofy expressions, silly poses, and "
+    "occasional deliberately bad/wonky doodle details (e.g. lopsided objects, "
+    "wobbly proportions, a silly sweat drop or motion line) where it fits the "
+    "moment, without breaking the simple doodle art style."
 )
 IMAGE_NEGATIVE_PROMPT = (
-    "photorealistic, 3D render, anime, Disney style, empty background, blank "
-    "white background, no background, blurry, low detail, deformed anatomy, "
-    "duplicated subjects, extra limbs, text, watermark, logo, muddy colors, "
-    "collage layout, split screen"
+    "photorealistic, 3D render, anime, Disney style, fully rendered detailed "
+    "background, busy background, gradients, blurry, low detail, "
+    "deformed anatomy, duplicated subjects, extra limbs, text, watermark, "
+    "logo, muddy colors, collage layout, split screen, intricate details, "
+    "harsh vibrant neon colors, oversaturated colors, bright primary colors, "
+    "characters or objects blending into the background color"
 )
 IMAGE_MODEL = os.environ.get("RUNWARE_IMAGE_MODEL", "openai:gpt-image@2")
 IMAGE_PROVIDER_QUALITY = os.environ.get("RUNWARE_IMAGE_QUALITY", "low")

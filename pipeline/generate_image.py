@@ -74,27 +74,33 @@ def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
             "Write prompts for still-image generation, not for animation or video.",
             "Every prompt must include a clear subject, a detailed setting/background, the emotion, and the idea being explained.",
             "Style requirements for every prompt:",
-            "- flat-color 2D cartoon illustration in the style of popular animated YouTube explainer videos (e.g. Sketch's Cartoons / Sketch Empire)",
-            "- stick-figure characters with round heads, simple dot or oval eyes, and expressive eyebrows/mouths that clearly show emotion (happy, scared, sad, confused, excited, embarrassed, etc.)",
-            "- thin black line arms and legs, simple flat-color clothing or accessories when relevant to the character",
-            "- a fully rendered, detailed background that matches the scene's location, era, and time of day (e.g. bedroom at night, ancient Roman dining hall, Japanese temple courtyard, city street, classroom, forest)",
-            "- include props, furniture, and architecture that fit the setting and help tell the story",
-            "- bold, thick, slightly uneven black outlines around characters and major objects",
-            "- flat colors with simple shading; warm tones for cozy or daytime scenes, cool tones for night, tense, or sad scenes",
-            "- the lighting and color palette should reinforce the emotional tone of the line being narrated",
-            "- keep character designs consistent (same look for the same recurring character) and keep the overall art style consistent across scenes",
-            "- 16:9 horizontal cinematic framing, with the character(s) placed inside their environment, not floating on empty space",
+            "- very simple, childlike 2D doodle/whiteboard-explainer style, like a hand-drawn sketch video",
+            "- stick-figure characters with round heads, simple dot or oval eyes, and simple eyebrows/mouths that clearly show emotion (happy, scared, sad, confused, excited, embarrassed, etc.)",
+            "- thin black line arms and legs, no detailed clothing or accessories unless essential to the idea",
+            "- background color: use a single flat soft, chill, pastel/muted color that gently fits the scene's mood, place, or time of day (e.g. soft pale blue, soft muted lavender, soft warm cream, soft dusty pink, soft pale grey-green); plain white is one valid option and should be the default only when the line has no specific place, time, or mood; never use harsh, strong, neon, or highly saturated colors",
+            "- when this scene shares mood/location with the neighboring scene(s), shift the background to a nearby soft tone rather than an unrelated color, so the palette flows smoothly across the video instead of jumping abruptly",
+            "- add a small handful of simple doodle objects in the background and/or foreground that fit the scene and keep it visually engaging (e.g. an outdoor scene gets a tree, a bird, a road, a house, a cloud; an indoor scene gets a bed, a window, a lamp) — pick 2-5 objects that make sense for this specific line",
+            "- every object must stay as plain and simple as the main character: flat single-color shapes, no gradients, no shading, no fine detail, no busy or fully rendered scenery",
+            "- every character and object must be filled with a flat color that clearly contrasts with the background so it never blends in (e.g. on a soft light blue background, draw the stick figure in white or another contrasting color, never a similar blue)",
+            "- bold, thick, slightly uneven black outlines around characters and the simple objects present",
+            "- keep character designs consistent (same look for the same recurring character) and keep the overall art style consistent and simple across scenes",
+            "- 16:9 horizontal framing, with the character(s) as the clear focal point and the simple doodle objects placed around them",
             "- handwritten-style text, speech bubbles, or simple symbols (arrows, question marks, exclamation marks) only when they help explain the idea, and only if short and spelled correctly",
+            "- make it funny and entertaining where it fits the line: exaggerated goofy facial expressions, silly poses, and occasional deliberately bad/wonky doodle details (lopsided objects, wobbly proportions, a silly sweat drop or motion line) — humor should never break the simple doodle art style or make the scene confusing",
             "Things to avoid in every prompt:",
             "- photorealism",
             "- 3D rendering",
             "- anime or Disney-style detailed faces",
-            "- empty, blank, or plain white backgrounds",
-            "- minimalist MS Paint doodles with no setting",
+            "- fully rendered, detailed, or busy backgrounds",
             "- glossy modern design or photographic lighting",
             "- realistic human anatomy",
             "- text, watermark, or logos unless explicitly part of the scene",
-            "The drawings should feel like a polished but simple animated explainer video: charming, easy to read at a glance, with a clear sense of place and emotion in every frame.",
+            "- harsh, strong, neon, or oversaturated colors",
+            "- characters or objects whose color blends into the background",
+            "- naming or describing any real, copyrighted, or trademarked character, franchise, movie, brand, or celebrity (e.g. Darth Vader, Mickey Mouse, Batman, a specific named actor) — the image generator will reject these even when only described, not named, if the description still matches that character's well-known design (e.g. 'a yellow creature with red cheeks, pointy ears, and a lightning-bolt tail' is instantly recognizable as Pikachu even with no name used). When a transcript line is itself about a famous misremembered visual detail of a copyrighted character (e.g. 'people think Pikachu's tail has a black tip'), the rejection risk comes from the signature color too, not just the extra accessories — change the creature's base color to something that character is not known for (e.g. orange or teal instead of yellow) in addition to dropping cheeks/lightning/other iconic accessories, while still keeping the one plot-relevant marking (the tail or ear tip color) so the joke still reads",
+            "- for unmistakably shaped copyrighted items (e.g. a dark helmet with the exact silhouette of a famous movie villain, a glowing sword/blade tied to one franchise) — recoloring or renaming is not enough, because the rendered shape itself still reads as that character; for these, skip drawing the character or item at all and represent the joke abstractly instead, e.g. a speech-bubble doodle with the misremembered word crossed out by an X, a thought bubble, or simple unlabeled shapes with question marks",
+            "- poses that could be misread as self-harm, even innocently (e.g. gripping or pulling at one's own head/hair with both hands, choking gestures) — for shock, disbelief, or fear use clearly comedic alternatives instead: hands raised near the face, jaw-drop, wide eyes, a single sweat drop, or a startled jump",
+            "The drawings should feel like a simple, charming hand-drawn doodle explainer that's also funny and entertaining: easy to read at a glance, with just enough simple background/foreground detail and goofy humor to stay engaging without becoming busy or confusing.",
             f"Assume this persistent global style is always added separately too: {config.IMAGE_PROMPT_STYLE}",
             "For each scene, return a prompt that is specific enough to generate a different image for that timestamp.",
             "Output format rules:",
@@ -102,7 +108,7 @@ def _build_planner_prompt(segments: list[dict[str, Any]]) -> str:
             "- Return exactly one line per segment.",
             "- Use this exact delimiter between fields: |||",
             "- Each line must follow this exact format (replace each field with its real value):",
-            "  1|||hard|||false|||none|||Man walks into hospital brain scanner|||Flat-color cartoon illustration of a stick-figure man with a worried expression walking into a brightly lit hospital room, large grey MRI scanner in the background, medical posters and equipment on the walls, cool blue-white lighting, thick black outlines",
+            "  1|||hard|||false|||none|||Man walks into hospital brain scanner|||Simple childlike doodle illustration of a white stick-figure man with a worried expression, walking past a simple scanner shape, a window, and a wall clock, soft muted pale blue background, thick black outlines",
             "- scene_change: use the word hard or soft (not the label 'scene_change')",
             "- continue_from_previous: use the word true or false (not the label 'continue_from_previous')",
             "- reference_mode: use the word none, soft, or strong (not the label 'reference_mode')",
@@ -286,6 +292,8 @@ def _plan_with_minimax_batch(
 
 
 _MINIMAX_BATCH_RETRIES = 3
+_IMAGE_GENERATION_RETRIES = 4
+_IMAGE_RETRY_BACKOFF_SECONDS = 3
 
 
 def _plan_with_minimax(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -466,10 +474,13 @@ def _plan_with_heuristics(segments: list[dict[str, Any]]) -> list[dict[str, Any]
                 "continue_from_previous": continue_from_previous,
                 "reference_mode": reference_mode,
                 "prompt": (
-                    f"Create a flat-color 2D cartoon illustration for this narration beat: {transcript}. "
-                    "Show stick-figure character(s) with clear, expressive emotions set against a "
-                    "fully detailed background that matches the scene's location, time of day, and mood, "
-                    "in the style of an animated YouTube explainer video."
+                    f"Create a very simple, childlike 2D doodle illustration for this narration beat: {transcript}. "
+                    "Show stick-figure character(s) with clear, exaggerated, goofy expressions, filled with a "
+                    "color that contrasts clearly against the background, on a soft, chill, pastel/muted "
+                    "background color that gently fits the scene's mood (plain white only if the line has no "
+                    "specific place, time, or mood — never harsh or vibrant colors), with a small handful of "
+                    "simple doodle objects around them that fit the scene, funny and entertaining but still "
+                    "in the style of a hand-drawn whiteboard explainer video."
                 ),
             }
         )
@@ -678,8 +689,9 @@ async def generate_images(
         done[int(scene["scene_number"])] = ev
 
     semaphore = asyncio.Semaphore(config.IMAGE_GENERATION_CONCURRENCY)
+    failures: list[tuple[int, str]] = []
 
-    async def _generate_scene(scene: dict[str, Any]) -> str:
+    async def _generate_scene(scene: dict[str, Any]) -> str | None:
         scene_num = int(scene["scene_number"])
 
         # Dependent scenes wait until their reference image is written before grabbing the semaphore
@@ -692,10 +704,33 @@ async def generate_images(
         if scene["continue_from_previous"]:
             prev_path = _find_previous_generated_image(scene_num, scenes, target_dir)
 
-        async with semaphore:
-            result = await _generate_one_image(runware, scene, target_dir, previous_image_path=prev_path)
+        result = None
+        last_exc: Exception | None = None
+        for attempt in range(1, _IMAGE_GENERATION_RETRIES + 1):
+            try:
+                async with semaphore:
+                    result = await _generate_one_image(
+                        runware, scene, target_dir, previous_image_path=prev_path
+                    )
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                print(f"[image] scene {scene_num}: attempt {attempt} failed: {exc}")
+                if attempt < _IMAGE_GENERATION_RETRIES:
+                    await asyncio.sleep(_IMAGE_RETRY_BACKOFF_SECONDS * attempt)
 
+        # Always release the event so dependent scenes don't wait forever on a failed
+        # prerequisite — they'll fall back to generating without a reference image.
         done[scene_num].set()
+
+        if last_exc is not None:
+            print(
+                f"[image] scene {scene_num}: giving up after {_IMAGE_GENERATION_RETRIES} attempt(s), "
+                f"skipping. Reason: {last_exc}"
+            )
+            failures.append((scene_num, str(last_exc)))
+            return None
         return result
 
     n_ind = sum(1 for s in selected_scenes if not s["continue_from_previous"])
@@ -707,6 +742,17 @@ async def generate_images(
     )
 
     await asyncio.gather(*[_generate_scene(s) for s in selected_scenes])
+
+    if failures:
+        config.ensure_dirs()
+        with open(config.FAILED_SCENES_LOG, "w", encoding="utf-8") as handle:
+            for scene_num, reason in failures:
+                scene = next(s for s in selected_scenes if int(s["scene_number"]) == scene_num)
+                handle.write(f"Scene {scene_num}: {reason}\nPrompt: {_compose_prompt(scene)}\n\n")
+        print(
+            f"[image] {len(failures)} scene(s) failed and were skipped: "
+            f"{[num for num, _ in failures]}. Details written to {config.FAILED_SCENES_LOG}"
+        )
 
     return [
         os.path.join(target_dir, s["image_name"])

@@ -125,6 +125,11 @@ def _chunk_pause_ms(chunk_text, paragraph_break=False):
 
 
 def _build_chunk_prompt(chunk_text, index, total, prev_chunk=None, next_chunk=None):
+    # NOTE: prev_chunk/next_chunk are intentionally NOT embedded in the prompt.
+    # Gemini TTS reads aloud any script text it is given regardless of
+    # "do not read" instructions, so including neighbouring chunk text caused
+    # the seams to be spoken twice / out of order. Continuity is preserved via
+    # the narrator directives below, which are instructions rather than script.
     context_lines = [
         config.GEMINI_TTS_STYLE or "",
         f"This is part {index} of {total} from one continuous narration recording.",
@@ -133,13 +138,9 @@ def _build_chunk_prompt(chunk_text, index, total, prev_chunk=None, next_chunk=No
         "Maintain the exact same speaking rate throughout — do not speed up or slow down.",
         "Do not add extra breath pauses, preambles, or trailing silence.",
         "Read only the EXCERPT text below aloud, nothing else.",
+        "EXCERPT:",
+        chunk_text,
     ]
-    if prev_chunk:
-        context_lines.append(f"Preceding text (for continuity, do not re-read): {prev_chunk[-220:]}")
-    if next_chunk:
-        context_lines.append(f"Following text (for continuity, do not pre-read): {next_chunk[:220]}")
-    context_lines.append("EXCERPT:")
-    context_lines.append(chunk_text)
     return "\n".join(context_lines)
 
 
